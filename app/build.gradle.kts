@@ -22,7 +22,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                // Use Maven Central's canonical host for Robolectric SDK downloads.
+                it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+            }
+        }
+    }
     sourceSets.getByName("test").assets.srcDir("$projectDir/schemas")
 }
 
