@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">MamaLink</string>
+    <string name="dashboard_title">Dashboard</string>
+    <string name="stage_one_notice">Stage 1 · Project foundation
+Explore the navigation scaffold. All feature screens are placeholders.</string>
+    <string name="explore_foundation">Explore the foundation</string>
+    <string name="caregiver_title">Caregiver profile</string>
+    <string name="child_title">Child profiles</string>
+    <string name="appointments_title">Appointments</string>
+    <string name="timeline_title">Care timeline</string>
+    <string name="resources_title">Health resources</string>
+    <string name="placeholder_badge">Stage 1 placeholder</string>
+    <string name="caregiver_description">The caregiver profile screen will be developed in a later stage. Profile entry, editing and storage are not available yet.</string>
+    <string name="child_description">Child profile screens will be developed in a later stage. No child records are created or displayed here.</string>
+    <string name="appointments_description">Appointment management will be developed in a later stage. Scheduling and reminders are not available yet.</string>
+    <string name="timeline_description">The care timeline will be developed in a later stage. No care events, milestones or recommendations are provided here.</string>
+    <string name="resources_description">Reviewed educational resources may be added in a later stage. No health guidance or medical content is provided here.</string>
+    <string name="placeholder_footer">Navigation preview only. No patient information is collected on this screen.</string>
+</resources>
