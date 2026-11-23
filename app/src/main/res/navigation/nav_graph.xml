@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph" app:startDestination="@id/dashboardFragment">
+    <fragment android:id="@+id/dashboardFragment"
+        android:name="com.mamalink.app.ui.dashboard.DashboardFragment"
+        android:label="@string/dashboard_title" />
+    <fragment android:id="@+id/caregiverFragment"
+        android:name="com.mamalink.app.ui.placeholder.PlaceholderFragment"
+        android:label="@string/caregiver_title">
+        <argument android:name="titleRes" app:argType="reference" android:defaultValue="@string/caregiver_title" />
+        <argument android:name="descriptionRes" app:argType="reference" android:defaultValue="@string/caregiver_description" />
+    </fragment>
+    <fragment android:id="@+id/childFragment"
+        android:name="com.mamalink.app.ui.placeholder.PlaceholderFragment"
+        android:label="@string/child_title">
+        <argument android:name="titleRes" app:argType="reference" android:defaultValue="@string/child_title" />
+        <argument android:name="descriptionRes" app:argType="reference" android:defaultValue="@string/child_description" />
+    </fragment>
+    <fragment android:id="@+id/appointmentsFragment"
+        android:name="com.mamalink.app.ui.placeholder.PlaceholderFragment"
+        android:label="@string/appointments_title">
+        <argument android:name="titleRes" app:argType="reference" android:defaultValue="@string/appointments_title" />
+        <argument android:name="descriptionRes" app:argType="reference" android:defaultValue="@string/appointments_description" />
+    </fragment>
+    <fragment android:id="@+id/timelineFragment"
+        android:name="com.mamalink.app.ui.placeholder.PlaceholderFragment"
+        android:label="@string/timeline_title">
+        <argument android:name="titleRes" app:argType="reference" android:defaultValue="@string/timeline_title" />
+        <argument android:name="descriptionRes" app:argType="reference" android:defaultValue="@string/timeline_description" />
+    </fragment>
+    <fragment android:id="@+id/resourcesFragment"
+        android:name="com.mamalink.app.ui.placeholder.PlaceholderFragment"
+        android:label="@string/resources_title">
+        <argument android:name="titleRes" app:argType="reference" android:defaultValue="@string/resources_title" />
+        <argument android:name="descriptionRes" app:argType="reference" android:defaultValue="@string/resources_description" />
+    </fragment>
+</navigation>
