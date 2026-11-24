@@ -171,7 +171,7 @@ class RecordsUiTest {
             data.children(1).value = listOf(demoChild.copy(name = "Stale private row")); idle()
             assertFalse(hasText(activity, "Stale private row")); assertTrue(hasText(activity, "Demo child B"))
             // Simulate a third caregiver whose query has not returned yet.
-            data.children[3] = TrackedRecords<Child>().apply { value = emptyList() }
+            data.children[3] = TrackedRecords(null)
             data.caregivers.value = data.caregivers.value!! + Caregiver(3, "Demo caregiver C"); idle()
             filter(activity, 2)
             assertEquals(0, activity.findViewById<LinearLayout>(R.id.records).childCount)
@@ -263,10 +263,13 @@ class RecordsUiTest {
                 data.children(2).value = listOf(demoChild.copy(id = 12, caregiverId = 2, name = "Demo child B")); idle()
                 assertSame(oldAdapter, picker(editor, R.string.child_optional).adapter)
             }
+            filter(activity, 1)
             val editor = add(activity)
             controller.recreate(); idle()
             assertFalse(editor.isShowing)
-            assertEquals(1, data.children(1).observerCount); assertEquals(1, data.appointments(1).observerCount)
+            assertEquals(1, controller.get().findViewById<Spinner>(R.id.filter_spinner).selectedItemPosition)
+            assertEquals(0, data.children(1).observerCount); assertEquals(0, data.appointments(1).observerCount)
+            assertEquals(1, data.children(2).observerCount); assertEquals(1, data.appointments(2).observerCount)
         }
         assertTrue(data.children.values.all { it.observerCount == 0 })
         assertTrue(data.appointments.values.all { it.observerCount == 0 })
@@ -298,6 +301,25 @@ class RecordsUiTest {
             assertTrue(data.appointments(1).value!!.isEmpty())
             val moved = data.appointments(2).value!!.single()
             assertEquals(2L, moved.caregiverId); assertEquals(12L, moved.childId)
+        }
+    }
+
+    @Test fun `appointment cannot save a stale child while the selected caregivers query is pending`() {
+        seed(); data.children[2] = TrackedRecords(null)
+        launch(AppointmentFragment::class.java).use { controller ->
+            val editor = add(controller.get())
+            field(editor, R.string.appointment_title_hint).setText("Demo visit")
+            select(picker(editor, R.string.child_optional), 1)
+            select(picker(editor, R.string.select_caregiver), 1)
+            assertFalse(editor.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+            assertFalse(picker(editor, R.string.child_optional).isEnabled)
+            assertEquals(0, picker(editor, R.string.child_optional).selectedItemPosition)
+            data.children(1).value = listOf(demoChild.copy(name = "Old caregiver result")); idle()
+            assertFalse(editor.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+            data.children(2).value = emptyList(); idle()
+            assertTrue(editor.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
+            save(editor)
+            assertNull(data.appointments(2).value!!.single().childId)
         }
     }
 

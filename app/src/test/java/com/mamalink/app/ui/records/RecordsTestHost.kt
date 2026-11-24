@@ -61,7 +61,8 @@ class RecordsTestHost : AppCompatActivity() {
     }
 }
 
-class TrackedRecords<T>(initial: List<T> = emptyList()) : MutableLiveData<List<T>>(initial) {
+class TrackedRecords<T>(initial: List<T>? = emptyList()) : MutableLiveData<List<T>>() {
+    init { if (initial != null) value = initial }
     private val listeners = mutableSetOf<Observer<in List<T>>>()
     val observerCount get() = listeners.size
     override fun observe(owner: LifecycleOwner, observer: Observer<in List<T>>) {
