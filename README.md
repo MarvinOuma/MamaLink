@@ -2,7 +2,7 @@
 
 A Kotlin Android foundation for the group's maternal and child wellness support project.
 **This stage is a navigation preview. Every feature destination is explicitly marked as a placeholder.**
-The UI collects no patient records and provides no medical advice or reminders. Stage 3 adds local persistence behind the agreed domain contracts; profile and appointment forms are still placeholders.
+Stage 2 adds repository-backed ViewModels for caregiver, child and appointment data; Stage 3 supplies their Room repositories. The UI collects no patient records and provides no medical advice or reminders. Profile and appointment forms are still placeholders.
 
 ## Open and run
 
@@ -34,6 +34,15 @@ This baseline intentionally pins a compatible stable toolchain rather than track
 - Room 2.7.2 with KSP and exported schema version 1. The only table is **non-clinical workspace metadata**. It starts empty; no data is seeded. No profile or appointment schema is assumed.
 - Local JVM tests for state mapping, actual Room reads/writes and repository observation, navigation to all five placeholders, Up, system Back, and activity recreation on API 23 and 35. Android-dependent tests run with Robolectric; no emulator is needed for these tests.
 - GitHub Actions builds the debug APK, runs unit tests and lint, checks the schema, and uploads reports and the debug APK.
+
+## Stage 2 — ViewModels
+
+- `ui/caregiver/CaregiverViewModel`, `ui/child/ChildViewModel`, and `ui/appointment/AppointmentViewModel` observe lists and individual records through the domain repository interfaces.
+- Each ViewModel exposes a read-only `operationState` LiveData for write progress, completion and errors. Inserts pass `id = 0` so the repository can generate an ID; updates and deletes report missing records.
+- Each ViewModel has a repository-injected `ViewModelProvider.Factory`, uses `viewModelScope` for suspend writes, and propagates coroutine cancellation.
+- Required names/titles, positive relationship IDs and saved-record IDs are validated before repository writes. Birth dates cannot be in the future. New appointments cannot be in the past; existing appointments may be corrected after their scheduled time. Appointment instants must fit Room's epoch-millisecond representation. Date/time values are already typed; forms must parse input at their boundary. Injectable clocks make date boundaries deterministic in tests.
+- One write runs at a time per ViewModel; further writes during loading are ignored so forms should disable their submit controls. Cancellation clears loading and propagates. Unexpected repository errors use a safe message; missing records and invalid fields have explicit messages. A later attempt replaces the previous result.
+- Production Room implementations now satisfy the domain repository interfaces. UI forms remain future work, so the current dashboard continues to open the clearly labelled placeholders. See [Stage 2 integration](docs/stage2-viewmodels.md) for validation and test scope.
 
 ```text
 app/src/main/java/com/mamalink/app/

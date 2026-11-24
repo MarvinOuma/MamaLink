@@ -1,6 +1,6 @@
 # MamaLink shared domain contracts (pre-Stage 2/3)
 
-This document fixes the shared API that Irene's ViewModels and Chanel's persistence implementation will use. The domain classes are pure Kotlin data models, **not** Room entities, and Stage 3 now implements them with Room; see [persistence details](stage3-persistence.md).
+This document fixes the shared API that Annah's ViewModels and Chanel's persistence implementation use. The domain classes are pure Kotlin data models, **not** Room entities, and Stage 3 now implements them with Room; see [persistence details](stage3-persistence.md).
 
 | Model | Fields | Types and meaning |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ This document fixes the shared API that Irene's ViewModels and Chanel's persiste
 
 ## Implementation handoff
 
-1. **Irene / Stage 2:** implement ViewModels against `domain.repository` interfaces using fakes in tests. Do not depend on Room or its entity representations.
+1. **Annah / Stage 2:** ViewModels use `domain.repository` interfaces, with fake-repository and Room integration tests. Presentation code does not depend on Room or its entity representations. See [Stage 2 integration](stage2-viewmodels.md).
 2. **Chanel / Stage 3:** implement Room entities, DAOs, converters and adapters that satisfy these interfaces. Introduce an explicit **v1 → v2** Room migration, export schema history and test migration. Preserve workspace metadata and avoid destructive migration.
 3. **Emmanuel / Stage 4:** design forms and displays around these data types; convert user-entered local date/time to `LocalDate` / `Instant` at the UI boundary.
 
