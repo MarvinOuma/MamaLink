@@ -15,6 +15,12 @@ class RoomAppointmentRepository(private val dao: AppointmentDao) : AppointmentRe
     override fun observeById(id: Long): LiveData<Appointment?> =
         dao.observeAppointmentById(id).map { it?.toDomain() }
 
+    override suspend fun getById(id: Long): Appointment? =
+        dao.getAppointmentById(id)?.toDomain()
+
+    override suspend fun getAll(): List<Appointment> =
+        dao.getAllAppointments().map { it.toDomain() }
+
     override suspend fun insert(appointment: Appointment): Long {
         require(appointment.id == 0L) { "New records must have id=0" }
         require(appointment.title.isNotBlank()) { "A name or title is required" }

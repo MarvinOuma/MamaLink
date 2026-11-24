@@ -58,4 +58,8 @@
     <string name="born_on">Date of birth: %1$s</string>
     <string name="with_caregiver">Caregiver: %1$s</string>
     <string name="for_child">Child: %1$s</string>
+    <string name="notification_channel_name">Appointment Reminders</string>
+    <string name="notification_channel_description">Notifications for upcoming maternal and child wellness appointments.</string>
+    <string name="notification_appointment_reminder_title">Upcoming Appointment</string>
+    <string name="notification_permission_required">Enable notifications in settings to receive appointment reminders.</string>
 </resources>

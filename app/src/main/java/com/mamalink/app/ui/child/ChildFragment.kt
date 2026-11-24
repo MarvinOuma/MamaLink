@@ -1,6 +1,5 @@
 package com.mamalink.app.ui.child
 
-import android.app.DatePickerDialog
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -16,12 +15,8 @@ import com.mamalink.app.domain.model.Child
 import com.mamalink.app.ui.caregiver.CaregiverViewModel
 import com.mamalink.app.ui.common.CaregiverRecordsObservation
 import com.mamalink.app.ui.common.ViewDialogs
-import com.mamalink.app.ui.common.recordForm
-import com.mamalink.app.ui.common.scrollable
 import com.mamalink.app.ui.common.RepositoryOperationState
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
 
 class ChildFragment : Fragment(R.layout.fragment_records) {
     private val app get() = requireActivity().application as MamaLinkApplication
@@ -91,36 +86,16 @@ class ChildFragment : Fragment(R.layout.fragment_records) {
     }
     private fun showEditor(existing: Child?) {
         if (caregivers.isEmpty()) return
-        val editorCaregivers = caregivers.toList()
-        val form = requireContext().recordForm()
-        val name = EditText(requireContext()).apply { hint = getString(R.string.child_name); setText(existing?.name); contentDescription = hint }
-        val caregiverPicker = Spinner(requireContext()).apply {
-            adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, editorCaregivers.map { it.fullName })
-            setSelection(editorCaregivers.indexOfFirst { it.id == (existing?.caregiverId ?: selectedCaregiverId) }.coerceAtLeast(0))
-            contentDescription = getString(R.string.select_caregiver)
-        }
-        val dob = Button(requireContext()); var chosenDate = existing?.dateOfBirth ?: LocalDate.now()
-        fun updateDate() { dob.text = chosenDate.format(dateFormat) }; updateDate()
-        dob.setOnClickListener {
-            val today = Calendar.getInstance()
-            dialogs.show(DatePickerDialog(requireContext(), { _, year, month, day -> chosenDate = LocalDate.of(year, month + 1, day); updateDate() }, chosenDate.year, chosenDate.monthValue - 1, chosenDate.dayOfMonth)
-                .apply { datePicker.maxDate = today.timeInMillis })
-        }
-        form.addView(name); form.addView(TextView(requireContext()).apply { text = getString(R.string.caregiver) }); form.addView(caregiverPicker)
-        form.addView(TextView(requireContext()).apply { text = getString(R.string.date_of_birth) }); form.addView(dob)
-        val dialog = AlertDialog.Builder(requireContext()).setTitle(if (existing == null) R.string.add_child else R.string.edit_child)
-            .setView(form.scrollable()).setNegativeButton(R.string.cancel, null).setPositiveButton(R.string.save, null).create()
-        dialog.setOnShowListener { dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            if (name.text.isNullOrBlank()) { name.error = getString(R.string.name_required); return@setOnClickListener }
-            val record = Child(existing?.id ?: 0, editorCaregivers[caregiverPicker.selectedItemPosition].id, name.text.toString().trim(), chosenDate)
-            if (existing == null) vm.addChild(record) else vm.updateChild(record)
-            dialog.dismiss()
-        } }; dialogs.show(dialog)
+        ChildEditorDialogFragment.newInstance(existing, selectedCaregiverId)
+            .show(childFragmentManager, ChildEditorDialogFragment.TAG)
     }
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putLong("caregiverId", selectedCaregiverId)
     }
-    override fun onDestroyView() { binding = null; super.onDestroyView() }
+    override fun onDestroyView() {
+        if (::recordsObservation.isInitialized) recordsObservation.clear()
+        binding = null
+        super.onDestroyView()
+    }
 }
-

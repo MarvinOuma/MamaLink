@@ -20,6 +20,7 @@
     <fragment android:id="@+id/appointmentsFragment"
         android:name="com.mamalink.app.ui.appointment.AppointmentFragment"
         android:label="@string/appointments_title">
+        <argument android:name="appointmentId" app:argType="long" android:defaultValue="0L" />
         <argument android:name="titleRes" app:argType="reference" android:defaultValue="@string/appointments_title" />
         <argument android:name="descriptionRes" app:argType="reference" android:defaultValue="@string/appointments_description" />
     </fragment>

@@ -71,6 +71,8 @@ class FakeChildren : FakeWrites<Child>(), ChildRepository {
 class FakeAppointments : FakeWrites<Appointment>(), AppointmentRepository {
     override fun observeByCaregiver(caregiverId: Long) = list.also { observedCaregiver = caregiverId }
     override fun observeById(id: Long) = single.also { observedId = id }
+    override suspend fun getById(id: Long) = single.value
+    override suspend fun getAll() = list.value.orEmpty()
     override suspend fun insert(appointment: Appointment) = insertValue(appointment)
     override suspend fun update(appointment: Appointment) = updateValue(appointment)
     override suspend fun deleteById(id: Long) = deleteValue(id)

@@ -7,11 +7,13 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.navOptions
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import com.mamalink.app.R
 import com.mamalink.app.databinding.ActivityMainBinding
+import com.mamalink.app.notifications.AppointmentNotificationHelper
 
 class MainActivity : AppCompatActivity() {
     private val navController by lazy {
@@ -31,7 +33,36 @@ class MainActivity : AppCompatActivity() {
             insets
         }
         setSupportActionBar(binding.toolbar)
+        (application as com.mamalink.app.MamaLinkApplication).reconcileAppointmentReminders()
         setupActionBarWithNavController(navController, appBarConfiguration)
+        handleAppointmentNotificationIntent(intent)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAppointmentNotificationIntent(intent)
+    }
+
+    private fun handleAppointmentNotificationIntent(intent: android.content.Intent?) {
+        if (intent?.getIntExtra(
+                AppointmentNotificationHelper.EXTRA_NAVIGATE_DESTINATION,
+                0,
+            ) != R.id.appointmentsFragment
+        ) return
+
+        val appointmentId = intent.getLongExtra(
+            AppointmentNotificationHelper.EXTRA_APPOINTMENT_ID,
+            0L,
+        )
+        val arguments = Bundle().apply { putLong("appointmentId", appointmentId) }
+        navController.navigate(
+            R.id.appointmentsFragment,
+            arguments,
+            navOptions { launchSingleTop = true },
+        )
+        intent.removeExtra(AppointmentNotificationHelper.EXTRA_NAVIGATE_DESTINATION)
+        intent.removeExtra(AppointmentNotificationHelper.EXTRA_APPOINTMENT_ID)
     }
 
     override fun onSupportNavigateUp(): Boolean =

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.mamalink.app.domain.model.Appointment
 import com.mamalink.app.domain.repository.AppointmentRepository
+import com.mamalink.app.notifications.AppointmentReminderScheduler
 import com.mamalink.app.ui.common.RepositoryOperationState
 import com.mamalink.app.ui.common.OperationRejected
 import com.mamalink.app.ui.common.validateInput
@@ -19,6 +20,7 @@ import java.time.Clock
 class AppointmentViewModel(
     private val repository: AppointmentRepository,
     private val clock: Clock = Clock.systemDefaultZone(),
+    private val reminderScheduler: AppointmentReminderScheduler? = null,
 ) : ViewModel() {
     private val _operationState = MutableLiveData(RepositoryOperationState())
     val operationState: LiveData<RepositoryOperationState> = _operationState
@@ -31,20 +33,29 @@ class AppointmentViewModel(
     fun addAppointment(appointment: Appointment) = perform(RepositoryOperationState.Operation.INSERT) {
         validate(appointment)
         validateInput(!appointment.scheduledAt.isBefore(clock.instant()), "New appointment time cannot be in the past.")
-        repository.insert(appointment.copy(id = 0L))
+        val id = repository.insert(appointment.copy(id = 0L))
+        if (id > 0L) scheduleReminder(appointment.copy(id = id))
+        id
     }
 
     fun updateAppointment(appointment: Appointment) = perform(RepositoryOperationState.Operation.UPDATE) {
         validateInput(appointment.id > 0, "A saved appointment is required.")
         validate(appointment)
         validateInput(repository.update(appointment) > 0, "Appointment was not found.")
+        scheduleReminder(appointment)
         appointment.id
     }
 
     fun deleteAppointment(id: Long) = perform(RepositoryOperationState.Operation.DELETE) {
         validateInput(id > 0, "A saved appointment is required.")
         validateInput(repository.deleteById(id) > 0, "Appointment was not found.")
+        runCatching { reminderScheduler?.cancelReminder(id) }
         id
+    }
+
+    private fun scheduleReminder(appointment: Appointment) {
+        // Room is the source of truth; startup reconciliation repairs a failed enqueue.
+        runCatching { reminderScheduler?.scheduleReminder(appointment) }
     }
 
     private fun validate(appointment: Appointment) {
@@ -77,11 +88,14 @@ class AppointmentViewModel(
         }
     }
 
-    class Factory(private val repository: AppointmentRepository) : ViewModelProvider.Factory {
+    class Factory(
+        private val repository: AppointmentRepository,
+        private val reminderScheduler: AppointmentReminderScheduler? = null,
+    ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass == AppointmentViewModel::class.java) { "Unknown ViewModel: $modelClass" }
             @Suppress("UNCHECKED_CAST")
-            return AppointmentViewModel(repository) as T
+            return AppointmentViewModel(repository, reminderScheduler = reminderScheduler) as T
         }
     }
 }
