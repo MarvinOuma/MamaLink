@@ -4,6 +4,17 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Match Robolectric 4.14.1 DefaultSdkProvider (instrumentation revision i7).
+// Resolve these with Gradle so tests never download SDKs through MavenArtifactFetcher.
+val robolectricSdks by configurations.creating {
+    isCanBeConsumed = false
+    isTransitive = false
+}
+val prepareRobolectricSdks by tasks.registering(Sync::class) {
+    from(robolectricSdks)
+    into(layout.buildDirectory.dir("robolectric-sdks"))
+}
+
 android {
     namespace = "com.mamalink.app"
     compileSdk = 35
@@ -27,8 +38,9 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             all {
-                // Use Maven Central's canonical host for Robolectric SDK downloads.
-                it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+                it.dependsOn(prepareRobolectricSdks)
+                it.systemProperty("robolectric.offline", "true")
+                it.systemProperty("robolectric.dependency.dir", layout.buildDirectory.dir("robolectric-sdks").get().asFile.absolutePath)
             }
         }
     }
@@ -38,6 +50,10 @@ android {
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 dependencies {
+    // API 23 (minimum), 28 (Room), 35 (target / resource loading).
+    robolectricSdks("org.robolectric:android-all-instrumented:6.0.1_r3-robolectric-r1-i7")
+    robolectricSdks("org.robolectric:android-all-instrumented:9-robolectric-4913185-2-i7")
+    robolectricSdks("org.robolectric:android-all-instrumented:15-robolectric-12650502-i7")
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.core)
     implementation(libs.androidx.appcompat)

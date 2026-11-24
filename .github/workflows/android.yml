@@ -37,7 +37,7 @@ jobs:
       - name: Set up Gradle and validate wrapper
         uses: gradle/actions/setup-gradle@v5
       - name: Build, test and lint
-        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+        run: ./gradlew --no-daemon :app:build :app:lint
       - name: Verify committed Room schema
         run: test -z "$(git status --porcelain -- app/schemas)"
       - name: Upload debug APK
@@ -53,5 +53,6 @@ jobs:
           name: verification-reports
           path: |
             app/build/reports/tests/
-            app/build/reports/lint-results-debug.*
+            app/build/test-results/
+            app/build/reports/lint-results-*
           if-no-files-found: warn

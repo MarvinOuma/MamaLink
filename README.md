@@ -21,6 +21,8 @@ For command-line builds, set `JAVA_HOME` to a JDK 17 installation and `ANDROID_H
 On Windows, use `gradlew.bat`. No system Gradle installation is required. The checked-in wrapper uses Gradle **8.11.1** with distribution SHA-256 verification.
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 Dependencies are pinned in `gradle/libs.versions.toml`; first sync/build needs internet access to Google Maven and Maven Central.
+Robolectric's API 23, 28 and 35 instrumented SDKs are pinned for Robolectric 4.14.1 and resolved by Gradle into `app/build/robolectric-sdks` before tests. The test JVM uses offline SDK resolution, so it performs no MavenArtifactFetcher downloads. Update these SDK coordinates when upgrading Robolectric or adding an API level. This does not make the first Gradle build network-free.
+CI runs `:app:build :app:lint`, including debug and release unit tests, and checks that Room schema generation leaves the committed schemas unchanged.
 This baseline intentionally pins a compatible stable toolchain rather than tracking latest releases.
 [AGP compatibility](https://developer.android.com/build/releases/agp-8-9-0-release-notes) · [Room releases](https://developer.android.com/jetpack/androidx/releases/room)
 
