@@ -31,7 +31,9 @@ class DatabaseMigrationTest {
     private fun seedVersionOne(name: String) {
         context.deleteDatabase(name)
         // Use the historical exported schema, including its Room identity hash.
-        val schema = context.assets.open("com.mamalink.app.data.local.MamaLinkDatabase/1.json")
+        val schema = checkNotNull(javaClass.classLoader?.getResourceAsStream(
+            "com.mamalink.app.data.local.MamaLinkDatabase/1.json",
+        )) { "Historical v1 schema is missing from test resources" }
             .bufferedReader().use { JSONObject(it.readText()).getJSONObject("database") }
         val helper = FrameworkSQLiteOpenHelperFactory().create(
             SupportSQLiteOpenHelper.Configuration.builder(context).name(name)

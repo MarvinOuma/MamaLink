@@ -63,6 +63,7 @@ android {
         }
     }
     sourceSets.getByName("test").assets.srcDir("$projectDir/schemas")
+    sourceSets.getByName("test").resources.srcDir("$projectDir/schemas")
 }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
