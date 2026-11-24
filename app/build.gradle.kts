@@ -4,6 +4,34 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Match Robolectric 4.14.1 DefaultSdkProvider (instrumentation revision i7).
+// Resolve these with Gradle so tests never download SDKs through MavenArtifactFetcher.
+val robolectricSdkVersions = listOf(
+    "6.0.1_r3-robolectric-r1-i7", // API 23 (minimum)
+    "9-robolectric-4913185-2-i7", // API 28 (Room)
+    "15-robolectric-12650502-i7", // API 35 (target / resource loading)
+)
+// Separate configurations prevent Gradle selecting only the newest SDK version.
+val robolectricSdks = robolectricSdkVersions.mapIndexed { index, version ->
+    configurations.create("robolectricSdk$index") {
+        isCanBeConsumed = false
+        isTransitive = false
+    }.also {
+        dependencies.add(it.name, "org.robolectric:android-all-instrumented:$version")
+    }
+}
+val prepareRobolectricSdks by tasks.registering(Sync::class) {
+    from(robolectricSdks)
+    into(layout.buildDirectory.dir("robolectric-sdks"))
+    doLast {
+        robolectricSdkVersions.forEach { version ->
+            check(destinationDir.resolve("android-all-instrumented-$version.jar").isFile) {
+                "Missing pinned Robolectric SDK: $version"
+            }
+        }
+    }
+}
+
 android {
     namespace = "com.mamalink.app"
     compileSdk = 35
@@ -27,8 +55,10 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             all {
-                // Use Maven Central's canonical host for Robolectric SDK downloads.
-                it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+                it.dependsOn(prepareRobolectricSdks)
+                it.testLogging.exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+                it.systemProperty("robolectric.offline", "true")
+                it.systemProperty("robolectric.dependency.dir", layout.buildDirectory.dir("robolectric-sdks").get().asFile.absolutePath)
             }
         }
     }
