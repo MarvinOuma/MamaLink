@@ -111,8 +111,9 @@ class AppointmentFragment : Fragment(R.layout.fragment_records) {
         fun refresh() { dateButton.text = chosen.format(dateFormat); timeButton.text = chosen.format(DateTimeFormatter.ofPattern("h:mm a")) }
         refresh()
         dateButton.setOnClickListener {
-            val now = LocalDate.now(); DatePickerDialog(requireContext(), { _, year, month, day -> chosen = chosen.withDate(year, month + 1, day); refresh() }, chosen.year, chosen.monthValue - 1, chosen.dayOfMonth)
-                .apply { datePicker.minDate = if (existing == null) System.currentTimeMillis() else 0 }.show()
+            val today = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+            DatePickerDialog(requireContext(), { _, year, month, day -> chosen = chosen.withDate(year, month + 1, day); refresh() }, chosen.year, chosen.monthValue - 1, chosen.dayOfMonth)
+                .apply { datePicker.minDate = if (existing == null) today.timeInMillis else 0 }.show()
         }
         timeButton.setOnClickListener { TimePickerDialog(requireContext(), { _, hour, minute -> chosen = chosen.withHour(hour).withMinute(minute); refresh() }, chosen.hour, chosen.minute, false).show() }
         val location = EditText(requireContext()).apply { hint = getString(R.string.location_optional); setText(existing?.location); contentDescription = hint }
