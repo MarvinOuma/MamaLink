@@ -5,7 +5,8 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.mamalink.app.data.model.Child
+import com.mamalink.app.domain.model.Child
+import java.time.LocalDate
 
 @Entity(
     tableName = "children",
@@ -14,40 +15,22 @@ import com.mamalink.app.data.model.Child
             entity = CaregiverEntity::class,
             parentColumns = ["id"],
             childColumns = ["caregiver_id"],
-            onDelete = ForeignKey.CASCADE,
-            onUpdate = ForeignKey.CASCADE,
+            onDelete = ForeignKey.RESTRICT,
+            onUpdate = ForeignKey.RESTRICT,
         ),
     ],
     indices = [
         Index(value = ["caregiver_id"]),
+        // Parent key for appointments' same-caregiver composite foreign key.
+        Index(value = ["id", "caregiver_id"], unique = true),
     ],
 )
 data class ChildEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "caregiver_id") val caregiverId: Long,
-    @ColumnInfo(name = "full_name") val fullName: String,
-    @ColumnInfo(name = "date_of_birth") val dateOfBirth: String,
-    @ColumnInfo(name = "gender") val gender: String,
-    @ColumnInfo(name = "medical_notes") val medicalNotes: String? = null,
-    @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
+    val name: String,
+    @ColumnInfo(name = "date_of_birth") val dateOfBirth: LocalDate,
 )
 
-fun ChildEntity.toDomain(): Child = Child(
-    id = id,
-    caregiverId = caregiverId,
-    fullName = fullName,
-    dateOfBirth = dateOfBirth,
-    gender = gender,
-    medicalNotes = medicalNotes,
-    createdAt = createdAt,
-)
-
-fun Child.toEntity(): ChildEntity = ChildEntity(
-    id = id,
-    caregiverId = caregiverId,
-    fullName = fullName,
-    dateOfBirth = dateOfBirth,
-    gender = gender,
-    medicalNotes = medicalNotes,
-    createdAt = createdAt,
-)
+fun ChildEntity.toDomain(): Child = Child(id, caregiverId, name, dateOfBirth)
+fun Child.toEntity(): ChildEntity = ChildEntity(id, caregiverId, name, dateOfBirth)

@@ -1,122 +1,87 @@
 package com.mamalink.app.data.repository
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.Observer
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import com.mamalink.app.data.local.MamaLinkDatabase
-import com.mamalink.app.data.model.Caregiver
-import com.mamalink.app.data.model.Child
+import com.mamalink.app.data.RoomTestBase
+import com.mamalink.app.data.awaitValue
+import com.mamalink.app.data.local.entity.CaregiverEntity
+import com.mamalink.app.data.local.entity.ChildEntity
+import com.mamalink.app.data.local.entity.toDomain
+import com.mamalink.app.domain.model.Caregiver
+import com.mamalink.app.domain.repository.CaregiverRepository
 import kotlinx.coroutines.test.runTest
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Rule
+import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.util.concurrent.CountDownLatch
+import java.time.LocalDate
+import java.time.Instant
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
-class RoomCaregiverRepositoryTest {
-    @get:Rule val instantExecutor = InstantTaskExecutorRule()
-    private lateinit var database: MamaLinkDatabase
-    private lateinit var repository: CaregiverRepository
-    private lateinit var childRepository: ChildRepository
+class RoomCaregiverRepositoryTest : RoomTestBase() {
+    private val repository: CaregiverRepository get() = RoomCaregiverRepository(database.caregiverDao())
+    private suspend fun sample(): Caregiver {
 
-    @Before fun openDatabase() {
-        database = Room.inMemoryDatabaseBuilder(
-            ApplicationProvider.getApplicationContext(), MamaLinkDatabase::class.java,
-        ).allowMainThreadQueries().build()
-        repository = RoomCaregiverRepository(database.caregiverDao())
-        childRepository = RoomChildRepository(database.childDao())
+
+        return Caregiver(0, "Demo caregiver")
     }
 
-    @After fun closeDatabase() { database.close() }
-
-    @Test fun `insert and get caregiver via repository`() = runTest {
-        val caregiver = Caregiver(
-            fullName = "Sarah Connor",
-            phoneNumber = "+15550188",
-            email = "sarah@example.com",
-            address = "789 Skyline Drive",
-        )
-        val id = repository.insertCaregiver(caregiver)
-        val fetched = repository.getCaregiverById(id)
-
-        assertNotNull(fetched)
-        assertEquals("Sarah Connor", fetched?.fullName)
+    @Test fun `domain contract CRUD maps values and affected row counts`() = runTest {
+        val original = sample()
+        val id = repository.insert(original)
+        assertTrue(id > 0)
+        val saved = original.copy(id = id)
+        assertEquals(saved, repository.observeById(id).awaitValue { it != null })
+        assertEquals(saved, database.caregiverDao().getCaregiverById(id)?.toDomain())
+        val updated = saved.copy(fullName = "Updated demo")
+        assertEquals(1, repository.update(updated))
+        assertEquals(updated, repository.observeById(id).awaitValue { it == updated })
+        assertEquals(0, repository.update(updated.copy(id = id + 1000)))
+        assertEquals(1, repository.deleteById(id))
+        assertEquals(0, repository.deleteById(id))
+        assertNull(repository.observeById(id).awaitValue())
     }
 
-    @Test fun `observe all caregivers emits inserted values`() = runTest {
-        repository.insertCaregiver(
-            Caregiver(
-                fullName = "Alice Smith",
-                phoneNumber = "+15550100",
-                email = "alice@example.com",
-                address = "1 First St",
-            ),
-        )
+    @Test fun `domain list contract observes only the requested records`() = runTest {
+        val item = sample()
 
-        val liveData = repository.observeAllCaregivers()
-        val latch = CountDownLatch(1)
-        var resultList: List<Caregiver>? = null
-        val observer = Observer<List<Caregiver>> { list ->
-            resultList = list
-            if (list.isNotEmpty()) latch.countDown()
-        }
-        liveData.observeForever(observer)
+        val values = repository.observeAll()
+        assertTrue(values.awaitValue().isEmpty())
+        val id = repository.insert(item)
+        assertEquals(listOf(item.copy(id = id)), values.awaitValue { it.size == 1 })
+    }
+
+    @Test fun `active observer receives insert update and deletion`() = runTest {
+        val item = sample()
+        val id = repository.insert(item)
+        val values = repository.observeById(id)
+        val delivered = LinkedBlockingQueue<List<Caregiver>>()
+        val observer = Observer<Caregiver?> { delivered.offer(listOfNotNull(it)) }
+        values.observeForever(observer)
         try {
-            assertTrue("LiveData did not deliver caregivers", latch.await(2, TimeUnit.SECONDS))
-            assertEquals(1, resultList?.size)
-            assertEquals("Alice Smith", resultList?.first()?.fullName)
+            assertEquals(listOf(item.copy(id = id)), delivered.poll(10, TimeUnit.SECONDS))
+            val updated = item.copy(id = id, fullName = "Observed update")
+            repository.update(updated)
+            assertEquals(listOf(updated), delivered.poll(10, TimeUnit.SECONDS))
+            repository.deleteById(id)
+            assertEquals(emptyList<Caregiver>(), delivered.poll(10, TimeUnit.SECONDS))
         } finally {
-            liveData.removeObserver(observer)
+            values.removeObserver(observer)
         }
     }
 
-    @Test fun `get caregiver with children returns nested domain models`() = runTest {
-        val cId = repository.insertCaregiver(
-            Caregiver(
-                fullName = "Mary Johnson",
-                phoneNumber = "+15550200",
-                email = "mary@example.com",
-                address = "2 Second St",
-            ),
-        )
-        childRepository.insertChild(
-            Child(
-                caregiverId = cId,
-                fullName = "Child One",
-                dateOfBirth = "2023-01-01",
-                gender = "Female",
-            ),
-        )
-
-        val caregiverWithChildren = repository.getCaregiverWithChildren(cId)
-        assertNotNull(caregiverWithChildren)
-        assertEquals("Mary Johnson", caregiverWithChildren?.caregiver?.fullName)
-        assertEquals(1, caregiverWithChildren?.children?.size)
-        assertEquals("Child One", caregiverWithChildren?.children?.first()?.fullName)
-    }
-
-    @Test fun `delete caregiver by id`() = runTest {
-        val id = repository.insertCaregiver(
-            Caregiver(
-                fullName = "ToDelete",
-                phoneNumber = "+15550000",
-                email = "delete@example.com",
-                address = "0 Nowhere St",
-            ),
-        )
-
-        repository.deleteCaregiverById(id)
-        assertNull(repository.getCaregiverById(id))
+    @Test fun `inserts reject existing IDs and blank required labels`() = runTest {
+        val item = sample()
+        val id = repository.insert(item)
+        try { repository.insert(item.copy(id = id)); fail("New record ID must be zero") }
+        catch (_: IllegalArgumentException) { }
+        try { repository.insert(item.copy(fullName = " ")); fail("Blank name or title") }
+        catch (_: IllegalArgumentException) { }
+        try { repository.update(item.copy(id = id, fullName = " ")); fail("Blank update") }
+        catch (_: IllegalArgumentException) { }
+        assertEquals(item.copy(id = id), repository.observeById(id).awaitValue { it != null })
     }
 }

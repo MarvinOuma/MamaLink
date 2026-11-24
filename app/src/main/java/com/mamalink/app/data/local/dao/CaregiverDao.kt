@@ -30,15 +30,15 @@ interface CaregiverDao {
     @Query("SELECT * FROM caregivers WHERE id = :id")
     suspend fun getCaregiverWithChildren(id: Long): CaregiverWithChildrenRelation?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertCaregiver(caregiver: CaregiverEntity): Long
 
     @Update
-    suspend fun updateCaregiver(caregiver: CaregiverEntity)
+    suspend fun updateCaregiver(caregiver: CaregiverEntity): Int
 
     @Delete
-    suspend fun deleteCaregiver(caregiver: CaregiverEntity)
+    suspend fun deleteCaregiver(caregiver: CaregiverEntity): Int
 
     @Query("DELETE FROM caregivers WHERE id = :id")
-    suspend fun deleteCaregiverById(id: Long)
+    suspend fun deleteCaregiverById(id: Long): Int
 }

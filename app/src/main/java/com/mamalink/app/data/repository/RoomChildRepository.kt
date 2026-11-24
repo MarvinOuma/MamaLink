@@ -5,33 +5,26 @@ import androidx.lifecycle.map
 import com.mamalink.app.data.local.dao.ChildDao
 import com.mamalink.app.data.local.entity.toDomain
 import com.mamalink.app.data.local.entity.toEntity
-import com.mamalink.app.data.model.Child
+import com.mamalink.app.domain.model.Child
+import com.mamalink.app.domain.repository.ChildRepository
 
 class RoomChildRepository(private val dao: ChildDao) : ChildRepository {
-    override fun observeAllChildren(): LiveData<List<Child>> =
-        dao.observeAllChildren().map { list -> list.map { it.toDomain() } }
-
-    override fun observeChildrenByCaregiverId(caregiverId: Long): LiveData<List<Child>> =
+    override fun observeByCaregiver(caregiverId: Long): LiveData<List<Child>> =
         dao.observeChildrenByCaregiverId(caregiverId).map { list -> list.map { it.toDomain() } }
 
-    override fun observeChildById(id: Long): LiveData<Child?> =
+    override fun observeById(id: Long): LiveData<Child?> =
         dao.observeChildById(id).map { it?.toDomain() }
 
-    override suspend fun getChildById(id: Long): Child? =
-        dao.getChildById(id)?.toDomain()
+    override suspend fun insert(child: Child): Long {
+        require(child.id == 0L) { "New records must have id=0" }
+        require(child.name.isNotBlank()) { "A name or title is required" }
+        return dao.insertChild(child.toEntity())
+    }
 
-    override suspend fun getChildrenByCaregiverId(caregiverId: Long): List<Child> =
-        dao.getChildrenByCaregiverId(caregiverId).map { it.toDomain() }
+    override suspend fun update(child: Child): Int {
+        require(child.name.isNotBlank()) { "A name or title is required" }
+        return dao.updateChild(child.toEntity())
+    }
 
-    override suspend fun insertChild(child: Child): Long =
-        dao.insertChild(child.toEntity())
-
-    override suspend fun updateChild(child: Child) =
-        dao.updateChild(child.toEntity())
-
-    override suspend fun deleteChild(child: Child) =
-        dao.deleteChild(child.toEntity())
-
-    override suspend fun deleteChildById(id: Long) =
-        dao.deleteChildById(id)
+    override suspend fun deleteById(id: Long): Int = dao.deleteChildById(id)
 }

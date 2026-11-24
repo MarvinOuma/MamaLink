@@ -11,10 +11,10 @@ import com.mamalink.app.data.local.entity.ChildEntity
 
 @Dao
 interface ChildDao {
-    @Query("SELECT * FROM children ORDER BY full_name ASC")
+    @Query("SELECT * FROM children ORDER BY name ASC")
     fun observeAllChildren(): LiveData<List<ChildEntity>>
 
-    @Query("SELECT * FROM children WHERE caregiver_id = :caregiverId ORDER BY full_name ASC")
+    @Query("SELECT * FROM children WHERE caregiver_id = :caregiverId ORDER BY name ASC")
     fun observeChildrenByCaregiverId(caregiverId: Long): LiveData<List<ChildEntity>>
 
     @Query("SELECT * FROM children WHERE id = :id")
@@ -23,18 +23,18 @@ interface ChildDao {
     @Query("SELECT * FROM children WHERE id = :id")
     suspend fun getChildById(id: Long): ChildEntity?
 
-    @Query("SELECT * FROM children WHERE caregiver_id = :caregiverId ORDER BY full_name ASC")
+    @Query("SELECT * FROM children WHERE caregiver_id = :caregiverId ORDER BY name ASC")
     suspend fun getChildrenByCaregiverId(caregiverId: Long): List<ChildEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertChild(child: ChildEntity): Long
 
     @Update
-    suspend fun updateChild(child: ChildEntity)
+    suspend fun updateChild(child: ChildEntity): Int
 
     @Delete
-    suspend fun deleteChild(child: ChildEntity)
+    suspend fun deleteChild(child: ChildEntity): Int
 
     @Query("DELETE FROM children WHERE id = :id")
-    suspend fun deleteChildById(id: Long)
+    suspend fun deleteChildById(id: Long): Int
 }

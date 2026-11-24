@@ -5,34 +5,26 @@ import androidx.lifecycle.map
 import com.mamalink.app.data.local.dao.CaregiverDao
 import com.mamalink.app.data.local.entity.toDomain
 import com.mamalink.app.data.local.entity.toEntity
-import com.mamalink.app.data.model.Caregiver
-import com.mamalink.app.data.model.CaregiverWithChildren
+import com.mamalink.app.domain.model.Caregiver
+import com.mamalink.app.domain.repository.CaregiverRepository
 
 class RoomCaregiverRepository(private val dao: CaregiverDao) : CaregiverRepository {
-    override fun observeAllCaregivers(): LiveData<List<Caregiver>> =
+    override fun observeAll(): LiveData<List<Caregiver>> =
         dao.observeAllCaregivers().map { list -> list.map { it.toDomain() } }
 
-    override fun observeCaregiverById(id: Long): LiveData<Caregiver?> =
+    override fun observeById(id: Long): LiveData<Caregiver?> =
         dao.observeCaregiverById(id).map { it?.toDomain() }
 
-    override fun observeCaregiverWithChildren(id: Long): LiveData<CaregiverWithChildren?> =
-        dao.observeCaregiverWithChildren(id).map { it?.toDomain() }
+    override suspend fun insert(caregiver: Caregiver): Long {
+        require(caregiver.id == 0L) { "New records must have id=0" }
+        require(caregiver.fullName.isNotBlank()) { "A name or title is required" }
+        return dao.insertCaregiver(caregiver.toEntity())
+    }
 
-    override suspend fun getCaregiverById(id: Long): Caregiver? =
-        dao.getCaregiverById(id)?.toDomain()
+    override suspend fun update(caregiver: Caregiver): Int {
+        require(caregiver.fullName.isNotBlank()) { "A name or title is required" }
+        return dao.updateCaregiver(caregiver.toEntity())
+    }
 
-    override suspend fun getCaregiverWithChildren(id: Long): CaregiverWithChildren? =
-        dao.getCaregiverWithChildren(id)?.toDomain()
-
-    override suspend fun insertCaregiver(caregiver: Caregiver): Long =
-        dao.insertCaregiver(caregiver.toEntity())
-
-    override suspend fun updateCaregiver(caregiver: Caregiver) =
-        dao.updateCaregiver(caregiver.toEntity())
-
-    override suspend fun deleteCaregiver(caregiver: Caregiver) =
-        dao.deleteCaregiver(caregiver.toEntity())
-
-    override suspend fun deleteCaregiverById(id: Long) =
-        dao.deleteCaregiverById(id)
+    override suspend fun deleteById(id: Long): Int = dao.deleteCaregiverById(id)
 }

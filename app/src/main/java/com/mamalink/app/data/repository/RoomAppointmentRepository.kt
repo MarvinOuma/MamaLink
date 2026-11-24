@@ -5,36 +5,26 @@ import androidx.lifecycle.map
 import com.mamalink.app.data.local.dao.AppointmentDao
 import com.mamalink.app.data.local.entity.toDomain
 import com.mamalink.app.data.local.entity.toEntity
-import com.mamalink.app.data.model.Appointment
+import com.mamalink.app.domain.model.Appointment
+import com.mamalink.app.domain.repository.AppointmentRepository
 
 class RoomAppointmentRepository(private val dao: AppointmentDao) : AppointmentRepository {
-    override fun observeAllAppointments(): LiveData<List<Appointment>> =
-        dao.observeAllAppointments().map { list -> list.map { it.toDomain() } }
-
-    override fun observeAppointmentsByCaregiverId(caregiverId: Long): LiveData<List<Appointment>> =
+    override fun observeByCaregiver(caregiverId: Long): LiveData<List<Appointment>> =
         dao.observeAppointmentsByCaregiverId(caregiverId).map { list -> list.map { it.toDomain() } }
 
-    override fun observeAppointmentsByChildId(childId: Long): LiveData<List<Appointment>> =
-        dao.observeAppointmentsByChildId(childId).map { list -> list.map { it.toDomain() } }
-
-    override fun observeAppointmentById(id: Long): LiveData<Appointment?> =
+    override fun observeById(id: Long): LiveData<Appointment?> =
         dao.observeAppointmentById(id).map { it?.toDomain() }
 
-    override suspend fun getAppointmentById(id: Long): Appointment? =
-        dao.getAppointmentById(id)?.toDomain()
+    override suspend fun insert(appointment: Appointment): Long {
+        require(appointment.id == 0L) { "New records must have id=0" }
+        require(appointment.title.isNotBlank()) { "A name or title is required" }
+        return dao.insertAppointment(appointment.toEntity())
+    }
 
-    override suspend fun getAppointmentsByCaregiverId(caregiverId: Long): List<Appointment> =
-        dao.getAppointmentsByCaregiverId(caregiverId).map { it.toDomain() }
+    override suspend fun update(appointment: Appointment): Int {
+        require(appointment.title.isNotBlank()) { "A name or title is required" }
+        return dao.updateAppointment(appointment.toEntity())
+    }
 
-    override suspend fun insertAppointment(appointment: Appointment): Long =
-        dao.insertAppointment(appointment.toEntity())
-
-    override suspend fun updateAppointment(appointment: Appointment) =
-        dao.updateAppointment(appointment.toEntity())
-
-    override suspend fun deleteAppointment(appointment: Appointment) =
-        dao.deleteAppointment(appointment.toEntity())
-
-    override suspend fun deleteAppointmentById(id: Long) =
-        dao.deleteAppointmentById(id)
+    override suspend fun deleteById(id: Long): Int = dao.deleteAppointmentById(id)
 }

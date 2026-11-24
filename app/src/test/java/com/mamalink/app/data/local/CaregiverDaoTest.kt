@@ -1,134 +1,71 @@
 package com.mamalink.app.data.local
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import com.mamalink.app.data.local.dao.CaregiverDao
-import com.mamalink.app.data.local.dao.ChildDao
+import com.mamalink.app.data.RoomTestBase
+import com.mamalink.app.data.awaitValue
 import com.mamalink.app.data.local.entity.CaregiverEntity
 import com.mamalink.app.data.local.entity.ChildEntity
+import com.mamalink.app.data.local.entity.AppointmentEntity
 import kotlinx.coroutines.test.runTest
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Rule
+import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.LocalDate
+import java.time.Instant
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
-class CaregiverDaoTest {
-    @get:Rule val instantExecutor = InstantTaskExecutorRule()
-    private lateinit var database: MamaLinkDatabase
-    private lateinit var caregiverDao: CaregiverDao
-    private lateinit var childDao: ChildDao
-
-    @Before fun openDatabase() {
-        database = Room.inMemoryDatabaseBuilder(
-            ApplicationProvider.getApplicationContext(), MamaLinkDatabase::class.java,
-        ).allowMainThreadQueries().build()
-        caregiverDao = database.caregiverDao()
-        childDao = database.childDao()
+class CaregiverDaoTest : RoomTestBase() {
+    @Test fun `insert update observe and delete caregiver with row counts`() = runTest {
+        val dao = database.caregiverDao()
+        val id = dao.insertCaregiver(CaregiverEntity(fullName = "Demo caregiver"))
+        val saved = dao.getCaregiverById(id)!!
+        assertTrue(id > 0)
+        assertNull(saved.phoneNumber)
+        assertEquals(1, dao.updateCaregiver(saved.copy(fullName = "Updated", phoneNumber = "+00123")))
+        assertEquals("+00123", dao.observeCaregiverById(id).awaitValue { it?.fullName == "Updated" }?.phoneNumber)
+        assertEquals(0, dao.updateCaregiver(saved.copy(id = id + 100)))
+        assertEquals(1, dao.deleteCaregiverById(id))
+        assertEquals(0, dao.deleteCaregiverById(id))
+        assertNull(dao.getCaregiverById(id))
     }
 
-    @After fun closeDatabase() { database.close() }
-
-    @Test fun `insert and retrieve caregiver`() = runTest {
-        val caregiver = CaregiverEntity(
-            fullName = "Jane Doe",
-            phoneNumber = "+15550199",
-            email = "jane.doe@example.com",
-            address = "123 Hope Street",
-            notes = "Fictional caregiver test record",
-        )
-        val id = caregiverDao.insertCaregiver(caregiver)
-        val fetched = caregiverDao.getCaregiverById(id)
-
-        assertNotNull(fetched)
-        assertEquals("Jane Doe", fetched?.fullName)
-        assertEquals("+15550199", fetched?.phoneNumber)
+    @Test fun `duplicate caregiver insert aborts and keeps children and appointments`() = runTest {
+        val dao = database.caregiverDao()
+        val id = dao.insertCaregiver(CaregiverEntity(fullName = "Original"))
+        val child = database.childDao().insertChild(ChildEntity(caregiverId = id, name = "Demo child", dateOfBirth = LocalDate.of(2024, 2, 29)))
+        val appointment = database.appointmentDao().insertAppointment(AppointmentEntity(caregiverId = id, childId = child, title = "Demo visit", scheduledAt = Instant.EPOCH))
+        try {
+            dao.insertCaregiver(CaregiverEntity(id, "Duplicate"))
+            fail("Duplicate primary key must be rejected")
+        } catch (_: android.database.sqlite.SQLiteConstraintException) { }
+        assertEquals("Original", dao.getCaregiverById(id)?.fullName)
+        assertNotNull(database.childDao().getChildById(child))
+        assertNotNull(database.appointmentDao().getAppointmentById(appointment))
+        assertEquals(1, dao.updateCaregiver(CaregiverEntity(id, "Renamed")))
+        assertNotNull(database.childDao().getChildById(child))
     }
 
-    @Test fun `update caregiver`() = runTest {
-        val caregiver = CaregiverEntity(
-            fullName = "Jane Doe",
-            phoneNumber = "+15550199",
-            email = "jane.doe@example.com",
-            address = "123 Hope Street",
-        )
-        val id = caregiverDao.insertCaregiver(caregiver)
-        val existing = caregiverDao.getCaregiverById(id)!!
-
-        val updated = existing.copy(address = "456 Peace Lane")
-        caregiverDao.updateCaregiver(updated)
-
-        val refetched = caregiverDao.getCaregiverById(id)
-        assertEquals("456 Peace Lane", refetched?.address)
+    @Test fun `caregiver deletion is restricted until dependents are explicitly deleted`() = runTest {
+        val id = database.caregiverDao().insertCaregiver(CaregiverEntity(fullName = "Demo"))
+        val child = database.childDao().insertChild(ChildEntity(caregiverId = id, name = "Child", dateOfBirth = LocalDate.of(2024, 1, 1)))
+        try {
+            database.caregiverDao().deleteCaregiverById(id)
+            fail("Caregiver with a child must be retained")
+        } catch (_: android.database.sqlite.SQLiteConstraintException) { }
+        assertNotNull(database.caregiverDao().getCaregiverById(id))
+        assertNotNull(database.childDao().getChildById(child))
+        database.childDao().deleteChildById(child)
+        assertEquals(1, database.caregiverDao().deleteCaregiverById(id))
     }
 
-    @Test fun `delete caregiver cascades to children`() = runTest {
-        val caregiverId = caregiverDao.insertCaregiver(
-            CaregiverEntity(
-                fullName = "Jane Doe",
-                phoneNumber = "+15550199",
-                email = "jane.doe@example.com",
-                address = "123 Hope Street",
-            ),
-        )
-
-        val childId = childDao.insertChild(
-            ChildEntity(
-                caregiverId = caregiverId,
-                fullName = "Baby Doe",
-                dateOfBirth = "2024-01-15",
-                gender = "Female",
-            ),
-        )
-
-        assertNotNull(childDao.getChildById(childId))
-
-        caregiverDao.deleteCaregiverById(caregiverId)
-
-        assertNull(caregiverDao.getCaregiverById(caregiverId))
-        assertNull(childDao.getChildById(childId))
-    }
-
-    @Test fun `get caregiver with children relation`() = runTest {
-        val caregiverId = caregiverDao.insertCaregiver(
-            CaregiverEntity(
-                fullName = "Jane Doe",
-                phoneNumber = "+15550199",
-                email = "jane.doe@example.com",
-                address = "123 Hope Street",
-            ),
-        )
-
-        childDao.insertChild(
-            ChildEntity(
-                caregiverId = caregiverId,
-                fullName = "Child One",
-                dateOfBirth = "2022-05-10",
-                gender = "Male",
-            ),
-        )
-
-        childDao.insertChild(
-            ChildEntity(
-                caregiverId = caregiverId,
-                fullName = "Child Two",
-                dateOfBirth = "2024-01-15",
-                gender = "Female",
-            ),
-        )
-
-        val relation = caregiverDao.getCaregiverWithChildren(caregiverId)
-        assertNotNull(relation)
-        assertEquals("Jane Doe", relation?.caregiver?.fullName)
-        assertEquals(2, relation?.children?.size)
+    @Test fun `caregiver with children relation is loaded transactionally`() = runTest {
+        val id = database.caregiverDao().insertCaregiver(CaregiverEntity(fullName = "Demo"))
+        repeat(2) { database.childDao().insertChild(ChildEntity(caregiverId = id, name = "Child $it", dateOfBirth = LocalDate.of(2024, 1, 1))) }
+        val relation = database.caregiverDao().getCaregiverWithChildren(id)!!
+        assertEquals(id, relation.caregiver.id)
+        assertEquals(2, relation.children.size)
+        assertTrue(relation.children.all { it.caregiverId == id })
     }
 }

@@ -29,15 +29,15 @@ interface AppointmentDao {
     @Query("SELECT * FROM appointments WHERE caregiver_id = :caregiverId ORDER BY appointment_date_time ASC")
     suspend fun getAppointmentsByCaregiverId(caregiverId: Long): List<AppointmentEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertAppointment(appointment: AppointmentEntity): Long
 
     @Update
-    suspend fun updateAppointment(appointment: AppointmentEntity)
+    suspend fun updateAppointment(appointment: AppointmentEntity): Int
 
     @Delete
-    suspend fun deleteAppointment(appointment: AppointmentEntity)
+    suspend fun deleteAppointment(appointment: AppointmentEntity): Int
 
     @Query("DELETE FROM appointments WHERE id = :id")
-    suspend fun deleteAppointmentById(id: Long)
+    suspend fun deleteAppointmentById(id: Long): Int
 }
