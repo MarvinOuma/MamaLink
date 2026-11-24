@@ -14,7 +14,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import java.time.Clock
-import java.time.Instant
 
 /** Manages appointments for a caregiver and exposes their repository observation. */
 class AppointmentViewModel(
@@ -52,11 +51,11 @@ class AppointmentViewModel(
         validateInput(appointment.title.isNotBlank(), "Appointment title is required.")
         validateInput(appointment.caregiverId > 0, "A caregiver is required.")
         validateInput(appointment.childId == null || appointment.childId > 0, "Select a saved child or leave it empty.")
-        validateInput(
-            appointment.scheduledAt >= Instant.ofEpochMilli(Long.MIN_VALUE) &&
-                appointment.scheduledAt <= Instant.ofEpochMilli(Long.MAX_VALUE),
-            "Appointment time is outside the supported range.",
-        )
+        try {
+            appointment.scheduledAt.toEpochMilli()
+        } catch (_: ArithmeticException) {
+            throw OperationRejected("Appointment time is outside the supported range.")
+        }
     }
 
     private fun perform(operation: RepositoryOperationState.Operation, action: suspend () -> Long) {

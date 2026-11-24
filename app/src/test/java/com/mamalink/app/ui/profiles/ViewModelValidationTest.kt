@@ -144,7 +144,8 @@ class ViewModelValidationTest {
         assertEquals(0, fake.calls)
         vm.updateAppointment(appointment.copy(scheduledAt = Instant.ofEpochMilli(Long.MIN_VALUE)))
         vm.updateAppointment(appointment.copy(scheduledAt = Instant.ofEpochMilli(Long.MAX_VALUE)))
-        assertEquals(2, fake.calls)
+        vm.updateAppointment(appointment.copy(scheduledAt = Instant.ofEpochMilli(Long.MAX_VALUE).plusNanos(999999)))
+        assertEquals(3, fake.calls)
     }
 
     @Test fun `updates require positive saved IDs for all profile types`() = runTest {
