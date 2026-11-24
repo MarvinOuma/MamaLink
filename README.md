@@ -1,7 +1,8 @@
-# MamaLink — Stage 2 ViewModels
+# MamaLink
 
 A Kotlin Android foundation for the group's maternal and child wellness support project.
-The app remains a navigation preview. Feature destinations are still placeholders; Stage 2 adds repository-backed ViewModels for caregiver, child and appointment data, but does not add profile or appointment screens, persistence implementations, medical advice or reminders.
+**This stage is a navigation preview. Every feature destination is explicitly marked as a placeholder.**
+Stage 2 adds repository-backed ViewModels for caregiver, child and appointment data; Stage 3 supplies their Room repositories. The UI collects no patient records and provides no medical advice or reminders. Profile and appointment forms are still placeholders.
 
 ## Open and run
 
@@ -20,6 +21,8 @@ For command-line builds, set `JAVA_HOME` to a JDK 17 installation and `ANDROID_H
 On Windows, use `gradlew.bat`. No system Gradle installation is required. The checked-in wrapper uses Gradle **8.11.1** with distribution SHA-256 verification.
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 Dependencies are pinned in `gradle/libs.versions.toml`; first sync/build needs internet access to Google Maven and Maven Central.
+Robolectric's API 23, 28 and 35 instrumented SDKs are pinned for Robolectric 4.14.1 and resolved by Gradle from Google's Maven Central mirror into `app/build/robolectric-sdks` before tests. The test JVM uses offline SDK resolution, so it performs no MavenArtifactFetcher downloads. Update these SDK coordinates when upgrading Robolectric or adding an API level. This does not make the first Gradle build network-free.
+CI runs `:app:build :app:lintDebug :app:lintRelease`, including debug and release unit tests, and checks that Room schema generation leaves the committed schemas unchanged.
 This baseline intentionally pins a compatible stable toolchain rather than tracking latest releases.
 [AGP compatibility](https://developer.android.com/build/releases/agp-8-9-0-release-notes) · [Room releases](https://developer.android.com/jetpack/androidx/releases/room)
 
@@ -37,7 +40,9 @@ This baseline intentionally pins a compatible stable toolchain rather than track
 - `ui/caregiver/CaregiverViewModel`, `ui/child/ChildViewModel`, and `ui/appointment/AppointmentViewModel` observe lists and individual records through the domain repository interfaces.
 - Each ViewModel exposes a read-only `operationState` LiveData for write progress, completion and errors. Inserts pass `id = 0` so the repository can generate an ID; updates and deletes report missing records.
 - Each ViewModel has a repository-injected `ViewModelProvider.Factory`, uses `viewModelScope` for suspend writes, and propagates coroutine cancellation.
-- The domain repository interfaces are present, but production implementations and UI forms are still future stages. The current dashboard therefore continues to open the clearly labelled placeholders.
+- Required names/titles, positive relationship IDs and saved-record IDs are validated before repository writes. Birth dates cannot be in the future. New appointments cannot be in the past; existing appointments may be corrected after their scheduled time. Appointment instants must fit Room's epoch-millisecond representation. Date/time values are already typed; forms must parse input at their boundary. Injectable clocks make date boundaries deterministic in tests.
+- One write runs at a time per ViewModel; further writes during loading are ignored so forms should disable their submit controls. Cancellation clears loading and propagates. Unexpected repository errors use a safe message; missing records and invalid fields have explicit messages. A later attempt replaces the previous result.
+- Production Room implementations now satisfy the domain repository interfaces. UI forms remain future work, so the current dashboard continues to open the clearly labelled placeholders. See [Stage 2 integration](docs/stage2-viewmodels.md) for validation and test scope.
 
 ```text
 app/src/main/java/com/mamalink/app/
@@ -63,9 +68,13 @@ Physical-device/emulator smoke testing and release signing were not performed.
 Before release, check scrolling and text scaling, light/dark themes, system-bar spacing, each destination, Up/Back, and rotation on a device.
 See the pull request checks for the independent GitHub Actions result and downloadable debug APK/reports.
 
+## Stage 3 persistence
+
+Room repositories now implement the shared domain contracts. The v2 database stores only the agreed profile and appointment fields, enforces same-caregiver child links, restricts related deletions, and migrates workspace metadata from v1 explicitly. See [Stage 3 persistence](docs/stage3-persistence.md) for representation, deletion policy and verification scope.
+
 ## Later-stage handoff
 
-Agree on domain models, data collection rules and repository contracts before adding caregiver, child or appointment tables. Add explicit Room migrations and preserve exported schema history when changing the database; destructive fallback is deliberately absent. Profile forms, CRUD, authentication, reminders, notifications, reviewed educational content, care events and clinical rules are future work. Do not use real patient information during development.
+Use the agreed domain models, collection rules and repository contracts. Add explicit Room migrations and preserve exported schema history when changing the database; destructive fallback is deliberately absent. Profile forms, CRUD, authentication, reminders, notifications, reviewed educational content, care events and clinical rules are future work. Do not use real patient information during development.
 
 Work on feature branches and open pull requests against `main`. Review the build/test/lint reports and perform a device smoke test before release. CI does not substitute for device testing, accessibility review, or clinical content review. No release signing keys belong in the repository.
 
