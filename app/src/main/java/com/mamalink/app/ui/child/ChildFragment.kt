@@ -30,6 +30,7 @@ class ChildFragment : Fragment(R.layout.fragment_records) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = FragmentRecordsBinding.bind(view); binding = b
+        b.placeholderTitle.text = getString(R.string.child_title)
         b.screenIntro.text = getString(R.string.child_intro); b.addButton.text = getString(R.string.add_child)
         b.filterSpinner.visibility = View.VISIBLE
         caregiversVm.caregivers.observe(viewLifecycleOwner) { list ->

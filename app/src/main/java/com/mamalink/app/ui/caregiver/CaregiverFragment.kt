@@ -21,6 +21,7 @@ class CaregiverFragment : Fragment(R.layout.fragment_records) {
     }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = FragmentRecordsBinding.bind(view)
+        b.placeholderTitle.text = getString(R.string.caregiver_title)
         b.screenIntro.text = getString(R.string.caregiver_intro)
         b.addButton.text = getString(R.string.add_caregiver)
         b.addButton.setOnClickListener { showEditor(null) }
