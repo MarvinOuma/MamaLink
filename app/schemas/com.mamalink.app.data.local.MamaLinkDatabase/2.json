@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "fb80d7f30cbb534d50fa6c126d43f5a7",
+    "identityHash": "bc4b6fb4839fef16860a6e1346c18afb",
     "entities": [
       {
         "tableName": "workspace_metadata",
@@ -30,7 +30,7 @@
       },
       {
         "tableName": "caregivers",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `full_name` TEXT NOT NULL, `phone_number` TEXT NOT NULL, `email` TEXT NOT NULL, `address` TEXT NOT NULL, `notes` TEXT, `created_at` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `full_name` TEXT NOT NULL, `phone_number` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -47,31 +47,7 @@
           {
             "fieldPath": "phoneNumber",
             "columnName": "phone_number",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "email",
-            "columnName": "email",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "address",
-            "columnName": "address",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "notes",
-            "columnName": "notes",
             "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "createdAt",
-            "columnName": "created_at",
-            "affinity": "INTEGER",
-            "notNull": true
           }
         ],
         "primaryKey": {
@@ -83,7 +59,7 @@
       },
       {
         "tableName": "children",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `caregiver_id` INTEGER NOT NULL, `full_name` TEXT NOT NULL, `date_of_birth` TEXT NOT NULL, `gender` TEXT NOT NULL, `medical_notes` TEXT, `created_at` INTEGER NOT NULL, FOREIGN KEY(`caregiver_id`) REFERENCES `caregivers`(`id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `caregiver_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `date_of_birth` TEXT NOT NULL, FOREIGN KEY(`caregiver_id`) REFERENCES `caregivers`(`id`) ON UPDATE RESTRICT ON DELETE RESTRICT )",
         "fields": [
           {
             "fieldPath": "id",
@@ -98,8 +74,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "fullName",
-            "columnName": "full_name",
+            "fieldPath": "name",
+            "columnName": "name",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -107,23 +83,6 @@
             "fieldPath": "dateOfBirth",
             "columnName": "date_of_birth",
             "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "gender",
-            "columnName": "gender",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "medicalNotes",
-            "columnName": "medical_notes",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "createdAt",
-            "columnName": "created_at",
-            "affinity": "INTEGER",
             "notNull": true
           }
         ],
@@ -142,13 +101,23 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_children_caregiver_id` ON `${TABLE_NAME}` (`caregiver_id`)"
+          },
+          {
+            "name": "index_children_id_caregiver_id",
+            "unique": true,
+            "columnNames": [
+              "id",
+              "caregiver_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_children_id_caregiver_id` ON `${TABLE_NAME}` (`id`, `caregiver_id`)"
           }
         ],
         "foreignKeys": [
           {
             "table": "caregivers",
-            "onDelete": "CASCADE",
-            "onUpdate": "CASCADE",
+            "onDelete": "RESTRICT",
+            "onUpdate": "RESTRICT",
             "columns": [
               "caregiver_id"
             ],
@@ -160,7 +129,7 @@
       },
       {
         "tableName": "appointments",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `caregiver_id` INTEGER NOT NULL, `child_id` INTEGER, `title` TEXT NOT NULL, `description` TEXT, `appointment_date_time` INTEGER NOT NULL, `location` TEXT NOT NULL, `status` TEXT NOT NULL, `created_at` INTEGER NOT NULL, FOREIGN KEY(`caregiver_id`) REFERENCES `caregivers`(`id`) ON UPDATE CASCADE ON DELETE CASCADE , FOREIGN KEY(`child_id`) REFERENCES `children`(`id`) ON UPDATE CASCADE ON DELETE SET NULL )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `caregiver_id` INTEGER NOT NULL, `child_id` INTEGER, `title` TEXT NOT NULL, `appointment_date_time` INTEGER NOT NULL, `location` TEXT, FOREIGN KEY(`caregiver_id`) REFERENCES `caregivers`(`id`) ON UPDATE RESTRICT ON DELETE RESTRICT , FOREIGN KEY(`child_id`, `caregiver_id`) REFERENCES `children`(`id`, `caregiver_id`) ON UPDATE RESTRICT ON DELETE RESTRICT )",
         "fields": [
           {
             "fieldPath": "id",
@@ -186,12 +155,7 @@
             "notNull": true
           },
           {
-            "fieldPath": "description",
-            "columnName": "description",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "appointmentDateTime",
+            "fieldPath": "scheduledAt",
             "columnName": "appointment_date_time",
             "affinity": "INTEGER",
             "notNull": true
@@ -199,20 +163,7 @@
           {
             "fieldPath": "location",
             "columnName": "location",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "status",
-            "columnName": "status",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "createdAt",
-            "columnName": "created_at",
-            "affinity": "INTEGER",
-            "notNull": true
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -232,20 +183,21 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_appointments_caregiver_id` ON `${TABLE_NAME}` (`caregiver_id`)"
           },
           {
-            "name": "index_appointments_child_id",
+            "name": "index_appointments_child_id_caregiver_id",
             "unique": false,
             "columnNames": [
-              "child_id"
+              "child_id",
+              "caregiver_id"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_appointments_child_id` ON `${TABLE_NAME}` (`child_id`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_appointments_child_id_caregiver_id` ON `${TABLE_NAME}` (`child_id`, `caregiver_id`)"
           }
         ],
         "foreignKeys": [
           {
             "table": "caregivers",
-            "onDelete": "CASCADE",
-            "onUpdate": "CASCADE",
+            "onDelete": "RESTRICT",
+            "onUpdate": "RESTRICT",
             "columns": [
               "caregiver_id"
             ],
@@ -255,13 +207,15 @@
           },
           {
             "table": "children",
-            "onDelete": "SET NULL",
-            "onUpdate": "CASCADE",
+            "onDelete": "RESTRICT",
+            "onUpdate": "RESTRICT",
             "columns": [
-              "child_id"
+              "child_id",
+              "caregiver_id"
             ],
             "referencedColumns": [
-              "id"
+              "id",
+              "caregiver_id"
             ]
           }
         ]
@@ -269,7 +223,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fb80d7f30cbb534d50fa6c126d43f5a7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bc4b6fb4839fef16860a6e1346c18afb')"
     ]
   }
 }

@@ -1,6 +1,6 @@
 # MamaLink shared domain contracts (pre-Stage 2/3)
 
-This document fixes the shared API that Irene's ViewModels and Chanel's persistence implementation will use. The domain classes are pure Kotlin data models, **not** Room entities, and there are **no implementations or new database tables in this PR**.
+This document fixes the shared API that Irene's ViewModels and Chanel's persistence implementation will use. The domain classes are pure Kotlin data models, **not** Room entities, and Stage 3 now implements them with Room; see [persistence details](stage3-persistence.md).
 
 | Model | Fields | Types and meaning |
 | --- | --- | --- |
@@ -17,7 +17,7 @@ This document fixes the shared API that Irene's ViewModels and Chanel's persiste
 - **Optional fields:** `phoneNumber`, `childId` and `location` may be null. Phone is a string, not a number, to preserve leading zeros and `+` prefixes.
 - **Observation:** the repository returns `LiveData`; lists are empty rather than null. `observeById` emits null when absent. Appointment lists are chronological (earliest first).
 - **Writes:** `insert` returns the newly assigned ID. `update` and `deleteById` return affected row counts (0 when no matching record). Writes are suspend functions, so ViewModels can call them within `viewModelScope`.
-- **Data constraints:** Stage 2 should validate required names/titles and prevent invalid dates or missing relationships. Stage 3 must defend referential integrity even if a caller bypasses UI validation. Decide with the group whether caregiver deletion cascades, restricts, or requires explicit confirmation before implementing it.
+- **Data constraints:** Stage 2 should validate required names/titles and prevent invalid dates or missing relationships. Stage 3 must defend referential integrity even if a caller bypasses UI validation. Stage 3 conservatively restricts deletion while related records exist; any cascade or confirmation flow needs a separate team decision.
 - **Privacy:** no real patient information, clinical records, diagnoses, or health recommendations belong in fixtures, tests, logs or commits.
 
 ## Implementation handoff

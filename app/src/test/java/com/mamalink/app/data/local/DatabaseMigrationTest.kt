@@ -23,6 +23,9 @@ import java.time.LocalDate
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class DatabaseMigrationTest {
+    private inline fun <T : androidx.room.RoomDatabase, R> T.useDatabase(block: (T) -> R): R =
+        try { block(this) } finally { close() }
+
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
     private fun seedVersionOne(name: String) {
@@ -57,11 +60,11 @@ class DatabaseMigrationTest {
         val name = "mamalink.db"
         seedVersionOne(name)
         try {
-            MamaLinkDatabase.create(context).use { migrated ->
+            MamaLinkDatabase.create(context).useDatabase { migrated ->
                 assertEquals("Demo v1 workspace", migrated.workspaceDao().getMetadata()?.label)
                 val sql = migrated.openHelper.writableDatabase
                 assertEquals(2, sql.version)
-                Room.inMemoryDatabaseBuilder(context, MamaLinkDatabase::class.java).build().use { fresh ->
+                Room.inMemoryDatabaseBuilder(context, MamaLinkDatabase::class.java).build().useDatabase { fresh ->
                     val freshSql = fresh.openHelper.writableDatabase
                     for (table in listOf("workspace_metadata", "caregivers", "children", "appointments")) {
                         assertEquals("Table mismatch: $table", TableInfo.read(freshSql, table), TableInfo.read(sql, table))
@@ -94,7 +97,7 @@ class DatabaseMigrationTest {
         val name = "missing-migration.db"
         seedVersionOne(name)
         try {
-            Room.databaseBuilder(context, MamaLinkDatabase::class.java, name).build().use { db ->
+            Room.databaseBuilder(context, MamaLinkDatabase::class.java, name).build().useDatabase { db ->
                 try {
                     db.openHelper.writableDatabase
                     fail("An explicit migration is required")
@@ -103,7 +106,7 @@ class DatabaseMigrationTest {
                 }
             }
             Room.databaseBuilder(context, MamaLinkDatabase::class.java, name)
-                .addMigrations(MamaLinkDatabase.MIGRATION_1_2).build().use { db ->
+                .addMigrations(MamaLinkDatabase.MIGRATION_1_2).build().useDatabase { db ->
                     assertEquals("Demo v1 workspace", db.openHelper.writableDatabase.query(
                         "SELECT label FROM workspace_metadata WHERE id = 1",
                     ).use { it.moveToFirst(); it.getString(0) })

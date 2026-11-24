@@ -1,8 +1,8 @@
-# MamaLink — Stage 1
+# MamaLink
 
 A Kotlin Android foundation for the group's maternal and child wellness support project.
 **This stage is a navigation preview. Every feature destination is explicitly marked as a placeholder.**
-It contains no medical advice, patient records, scheduling logic or reminders.
+The UI collects no patient records and provides no medical advice or reminders. Stage 3 adds local persistence behind the agreed domain contracts; profile and appointment forms are still placeholders.
 
 ## Open and run
 
@@ -59,9 +59,13 @@ Physical-device/emulator smoke testing and release signing were not performed.
 Before release, check scrolling and text scaling, light/dark themes, system-bar spacing, each destination, Up/Back, and rotation on a device.
 See the pull request checks for the independent GitHub Actions result and downloadable debug APK/reports.
 
+## Stage 3 persistence
+
+Room repositories now implement the shared domain contracts. The v2 database stores only the agreed profile and appointment fields, enforces same-caregiver child links, restricts related deletions, and migrates workspace metadata from v1 explicitly. See [Stage 3 persistence](docs/stage3-persistence.md) for representation, deletion policy and verification scope.
+
 ## Later-stage handoff
 
-Agree on domain models, data collection rules and repository contracts before adding caregiver, child or appointment tables. Add explicit Room migrations and preserve exported schema history when changing the database; destructive fallback is deliberately absent. Profile forms, CRUD, authentication, reminders, notifications, reviewed educational content, care events and clinical rules are future work. Do not use real patient information during development.
+Use the agreed domain models, collection rules and repository contracts. Add explicit Room migrations and preserve exported schema history when changing the database; destructive fallback is deliberately absent. Profile forms, CRUD, authentication, reminders, notifications, reviewed educational content, care events and clinical rules are future work. Do not use real patient information during development.
 
 Work on feature branches and open pull requests against `main`. Review the build/test/lint reports and perform a device smoke test before release. CI does not substitute for device testing, accessibility review, or clinical content review. No release signing keys belong in the repository.
 
