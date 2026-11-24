@@ -19,6 +19,9 @@
     <string name="child_intro">Register children and link each profile to a caregiver.</string>
     <string name="appointment_intro">Plan and manage upcoming visits for your family.</string>
     <string name="add_caregiver">Add caregiver</string>
+    <string name="add_record">Add</string>
+    <string name="filter_by_caregiver">Filter by caregiver</string>
+    <string name="no_records_yet">No records yet.</string>
     <string name="edit_caregiver">Edit caregiver</string>
     <string name="delete_caregiver">Delete caregiver?</string>
     <string name="add_child">Add child</string>
