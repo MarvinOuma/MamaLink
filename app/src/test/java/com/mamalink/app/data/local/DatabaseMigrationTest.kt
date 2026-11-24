@@ -84,7 +84,7 @@ class DatabaseMigrationTest {
                 sql.query("PRAGMA foreign_key_check").use { assertEquals(0, it.count) }
             }
             // Reopening verifies that Room's v2 identity is persisted, not just accepted once.
-            MamaLinkDatabase.create(context).use { reopened ->
+            MamaLinkDatabase.create(context).useDatabase { reopened ->
                 assertEquals("Demo v1 workspace", reopened.workspaceDao().getMetadata()?.label)
                 assertEquals(1, reopened.childDao().getChildrenByCaregiverId(1).size)
             }

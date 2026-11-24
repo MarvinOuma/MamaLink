@@ -24,4 +24,4 @@ Migration tests create a v1 database from the historical JSON and identity hash,
 
 DAO/repository tests cover domain API compatibility, dates/times, nullable fields, row counts, ordering/filtering, active LiveData updates, missing references, mismatched caregivers, reassignment, duplicate IDs and restricted deletion. Existing navigation, workspace and shared-contract tests remain.
 
-CI runs `:app:build :app:lint` for debug/release and fails on schema drift. Reports and generated schemas are uploaded for diagnosis. The UI remains the Stage 1 navigation preview; Stage 2/4 will wire profile forms to these contracts. This is not a release-readiness claim.
+CI runs `:app:build :app:lintDebug :app:lintRelease` for debug/release and fails on schema drift. Reports and generated schemas are uploaded for diagnosis. The UI remains the Stage 1 navigation preview; Stage 2/4 will wire profile forms to these contracts. This is not a release-readiness claim.
