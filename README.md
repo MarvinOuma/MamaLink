@@ -1,8 +1,7 @@
-# MamaLink — Stage 1
+# MamaLink — Stage 2 ViewModels
 
 A Kotlin Android foundation for the group's maternal and child wellness support project.
-**This stage is a navigation preview. Every feature destination is explicitly marked as a placeholder.**
-It contains no medical advice, patient records, scheduling logic or reminders.
+The app remains a navigation preview. Feature destinations are still placeholders; Stage 2 adds repository-backed ViewModels for caregiver, child and appointment data, but does not add profile or appointment screens, persistence implementations, medical advice or reminders.
 
 ## Open and run
 
@@ -32,6 +31,13 @@ This baseline intentionally pins a compatible stable toolchain rather than track
 - Room 2.7.2 with KSP and exported schema version 1. The only table is **non-clinical workspace metadata**. It starts empty; no data is seeded. No profile or appointment schema is assumed.
 - Local JVM tests for state mapping, actual Room reads/writes and repository observation, navigation to all five placeholders, Up, system Back, and activity recreation on API 23 and 35. Android-dependent tests run with Robolectric; no emulator is needed for these tests.
 - GitHub Actions builds the debug APK, runs unit tests and lint, checks the schema, and uploads reports and the debug APK.
+
+## Stage 2 — ViewModels
+
+- `ui/caregiver/CaregiverViewModel`, `ui/child/ChildViewModel`, and `ui/appointment/AppointmentViewModel` observe lists and individual records through the domain repository interfaces.
+- Each ViewModel exposes a read-only `operationState` LiveData for write progress, completion and errors. Inserts pass `id = 0` so the repository can generate an ID; updates and deletes report missing records.
+- Each ViewModel has a repository-injected `ViewModelProvider.Factory`, uses `viewModelScope` for suspend writes, and propagates coroutine cancellation.
+- The domain repository interfaces are present, but production implementations and UI forms are still future stages. The current dashboard therefore continues to open the clearly labelled placeholders.
 
 ```text
 app/src/main/java/com/mamalink/app/
