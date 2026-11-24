@@ -37,7 +37,7 @@ jobs:
       - name: Set up Gradle and validate wrapper
         uses: gradle/actions/setup-gradle@v5
       - name: Build, test and lint
-        run: ./gradlew --no-daemon :app:build :app:lint
+        run: ./gradlew --no-daemon :app:build :app:lintDebug :app:lintRelease
       - name: Verify committed Room schema
         run: test -z "$(git status --porcelain -- app/schemas)"
       - name: Upload debug APK
