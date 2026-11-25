@@ -1,8 +1,6 @@
 # MamaLink
 
-A Kotlin Android foundation for the group's maternal and child wellness support project.
-**This stage is a navigation preview. Every feature destination is explicitly marked as a placeholder.**
-Stage 2 adds repository-backed ViewModels for caregiver, child and appointment data; Stage 3 supplies their Room repositories. The UI collects no patient records and provides no medical advice or reminders. Profile and appointment forms are still placeholders.
+MamaLink is a Kotlin Android app for maternal and child wellness support. It uses XML layouts, Android Views, View Binding, MVVM, LiveData, Room and the Navigation component. Stage 5 integrates caregiver, child and appointment records with local appointment reminders. The app provides no medical diagnosis or treatment advice.
 
 ## Open and run
 
@@ -18,7 +16,7 @@ For command-line builds, set `JAVA_HOME` to a JDK 17 installation and `ANDROID_H
 ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 ```
 
-On Windows, use `gradlew.bat`. No system Gradle installation is required. The checked-in wrapper uses Gradle **8.11.1** with distribution SHA-256 verification.
+On Windows, use `gradlew.bat`. No system Gradle installation is required. The checked-in wrapper uses Gradle **8.14.7**. No system Gradle installation is required.
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 Dependencies are pinned in `gradle/libs.versions.toml`; first sync/build needs internet access to Google Maven and Maven Central.
 Robolectric's API 23, 28 and 35 instrumented SDKs are pinned for Robolectric 4.14.1 and resolved by Gradle from Google's Maven Central mirror into `app/build/robolectric-sdks` before tests. The test JVM uses offline SDK resolution, so it performs no MavenArtifactFetcher downloads. Update these SDK coordinates when upgrading Robolectric or adding an API level. This does not make the first Gradle build network-free.
@@ -72,9 +70,21 @@ See the pull request checks for the independent GitHub Actions result and downlo
 
 Room repositories now implement the shared domain contracts. The v2 database stores only the agreed profile and appointment fields, enforces same-caregiver child links, restricts related deletions, and migrates workspace metadata from v1 explicitly. See [Stage 3 persistence](docs/stage3-persistence.md) for representation, deletion policy and verification scope.
 
+## Stage 5 — records and appointment reminders
+
+Caregiver, child and appointment forms use the existing Room repositories. Their editor dialogs restore unsaved text, selections, dates and times after recreation; saving is explicit, and cancelling discards edits. Room foreign keys continue to require that an appointment's child belongs to the same caregiver.
+
+Appointment reminders use unique one-time WorkManager requests keyed by the appointment's stable Room ID. The default reminder runs 24 hours before the appointment; if it is less than 24 hours away, the request runs as soon as WorkManager can execute it. Appointments already in the past are not scheduled. WorkManager persists eligible work across process death and device restart. Delivery is deferrable and can be delayed by Doze, battery restrictions, force-stop, or device policy; this is not an exact alarm.
+
+Android 8.0 and later use the `appointment_reminders_channel` notification channel. Android 13 and later require `POST_NOTIFICATIONS`; the app requests permission when the user opens appointment creation. If permission is denied, records continue to work and the worker safely skips displaying a notification. Notification content is marked private for lock-screen redaction. Tapping a reminder opens Appointments.
+
+Room remains the source of truth. Successful writes enqueue or replace corresponding unique work; app startup and device restart reconcile reminders from persisted appointments. A worker rereads the appointment before posting, so deleted, rescheduled, or elapsed appointments do not show stale reminders. Exact-time delivery is intentionally not requested, so no exact-alarm permission or background service is needed.
+
+Before release, run debug and release builds, unit tests and lint, verify Room schema output, and exercise appointment CRUD, permission denial, notification tap, rotation and app restart on an emulator or device. Do not use real patient information during development.
+
 ## Later-stage handoff
 
-Use the agreed domain models, collection rules and repository contracts. Add explicit Room migrations and preserve exported schema history when changing the database; destructive fallback is deliberately absent. Profile forms, CRUD, authentication, reminders, notifications, reviewed educational content, care events and clinical rules are future work. Do not use real patient information during development.
+Use the agreed domain models, collection rules and repository contracts. Add explicit Room migrations and preserve exported schema history when changing the database; destructive fallback is deliberately absent. Authentication, reviewed educational content, care events and clinical rules remain future work. Do not use real patient information during development.
 
 Work on feature branches and open pull requests against `main`. Review the build/test/lint reports and perform a device smoke test before release. CI does not substitute for device testing, accessibility review, or clinical content review. No release signing keys belong in the repository.
 

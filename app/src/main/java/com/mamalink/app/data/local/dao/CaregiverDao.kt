@@ -16,6 +16,9 @@ interface CaregiverDao {
     @Query("SELECT * FROM caregivers ORDER BY full_name ASC")
     fun observeAllCaregivers(): LiveData<List<CaregiverEntity>>
 
+    @Query("SELECT * FROM caregivers ORDER BY full_name ASC")
+    suspend fun getAllCaregivers(): List<CaregiverEntity>
+
     @Query("SELECT * FROM caregivers WHERE id = :id")
     fun observeCaregiverById(id: Long): LiveData<CaregiverEntity?>
 

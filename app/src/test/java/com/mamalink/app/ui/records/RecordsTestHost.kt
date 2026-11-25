@@ -117,6 +117,8 @@ class ScreenData {
     val appointmentRepository = object : AppointmentRepository {
         override fun observeByCaregiver(caregiverId: Long) = appointments(caregiverId)
         override fun observeById(id: Long) = MutableLiveData<Appointment?>(null)
+        override suspend fun getById(id: Long) = appointments.values.asSequence().flatMap { it.value.orEmpty().asSequence() }.firstOrNull { it.id == id }
+        override suspend fun getAll() = appointments.values.flatMap { it.value.orEmpty() }.distinctBy { it.id }.sortedBy { it.scheduledAt }
         override suspend fun insert(appointment: Appointment): Long {
             write(); val id = nextId++; appointments(appointment.caregiverId).value = appointments(appointment.caregiverId).value.orEmpty() + appointment.copy(id = id); return id
         }
