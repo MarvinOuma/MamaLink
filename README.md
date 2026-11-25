@@ -1,28 +1,121 @@
 # MamaLink
 
-MamaLink is a Kotlin Android app for maternal and child wellness support. It uses XML layouts, Android Views, View Binding, MVVM, LiveData, Room and the Navigation component. Stage 5 integrates caregiver, child and appointment records with local appointment reminders. The app provides no medical diagnosis or treatment advice.
+MamaLink is a Kotlin Android app for maternal and child wellness support. It is a university group project prototype. It helps a caregiver keep fictional-in-development records of themselves, their children and upcoming appointments, and sends local appointment reminders. The app provides no medical diagnosis or treatment advice.
 
-## Open and run
+**Intended users:** caregivers of young children who want a simple place to track appointments.
+
+## Features
+
+**Implemented (functional)**
+- Caregiver records: add, view, edit and delete.
+- Child profiles linked to a caregiver, with birth-date validation.
+- Appointments linked to a caregiver and an optional child: create, view, edit, reschedule and cancel.
+- Local appointment reminders using WorkManager and notifications.
+- Data saved on the device with Room, and restored after the app is closed and reopened.
+- Navigation between the main sections, with toolbar Up and system Back support.
+- Unsaved form state restored after screen rotation.
+
+**Placeholder or planned (not implemented)**
+- Care timeline and health resources screens are clearly labelled placeholders.
+- Authentication, reviewed educational content, care events and clinical rules are future work.
+- No cloud services and no medical diagnosis or advice.
+
+## Technology stack
+
+- Kotlin, Android Views with XML layouts and View Binding
+- MVVM with ViewModel and LiveData
+- Room 2.7.2 (with KSP) for local persistence
+- WorkManager for appointment reminders, and Android notification APIs
+- Android Navigation component
+- Gradle (wrapper 8.14.7) and GitHub Actions for CI
+
+## Architecture
+
+```text
+Fragments (UI)  →  ViewModels (LiveData)  →  Repository interfaces  →  Room (DAO + database)
+```
+
+- **UI layer:** a single activity and Fragments. They display state, collect input, show messages and navigate. They observe LiveData with `viewLifecycleOwner`.
+- **ViewModels:** validate input, call repositories from `viewModelScope`, and expose read-only LiveData. They hold no Activity or Fragment references.
+- **Repositories:** the single contract between the ViewModels and the data layer.
+- **Room:** the source of truth. Foreign keys enforce that an appointment's child belongs to the same caregiver. Migrations are explicit and the schema history is committed in `app/schemas`.
+
+## Installation
 
 1. Clone this repository and open its root in Android Studio Meerkat (2024.3.1) or a newer version supporting AGP 8.9.2.
 2. Set the Gradle JDK to **17**. Install Android SDK Platform **35** and Build Tools **35.0.0** with SDK Manager.
 3. Let Android Studio sync the project, select the `app` run configuration, and run on an API **23+** device or emulator.
 
-The application ID and namespace are `com.mamalink.app`. Version `0.1.0` is an unsigned-for-release development foundation.
-Android Studio creates `local.properties` for the local SDK path; do not commit it.
-For command-line builds, set `JAVA_HOME` to a JDK 17 installation and `ANDROID_HOME` to your SDK directory.
+The application ID and namespace are `com.mamalink.app`. Android Studio creates `local.properties` for the local SDK path; do not commit it. For command-line builds, set `JAVA_HOME` to a JDK 17 installation and `ANDROID_HOME` to your SDK directory.
 
 ```sh
 ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 ```
 
-On Windows, use `gradlew.bat`. No system Gradle installation is required. The checked-in wrapper uses Gradle **8.14.7**. No system Gradle installation is required.
-The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
-Dependencies are pinned in `gradle/libs.versions.toml`; first sync/build needs internet access to Google Maven and Maven Central.
-Robolectric's API 23, 28 and 35 instrumented SDKs are pinned for Robolectric 4.14.1 and resolved by Gradle from Google's Maven Central mirror into `app/build/robolectric-sdks` before tests. The test JVM uses offline SDK resolution, so it performs no MavenArtifactFetcher downloads. Update these SDK coordinates when upgrading Robolectric or adding an API level. This does not make the first Gradle build network-free.
-CI runs `:app:build :app:lintDebug :app:lintRelease`, including debug and release unit tests, and checks that Room schema generation leaves the committed schemas unchanged.
-This baseline intentionally pins a compatible stable toolchain rather than tracking latest releases.
-[AGP compatibility](https://developer.android.com/build/releases/agp-8-9-0-release-notes) · [Room releases](https://developer.android.com/jetpack/androidx/releases/room)
+On Windows, use `.\gradlew.bat` in PowerShell. No system Gradle installation is required. The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
+
+## User guide
+
+Button and screen names may differ slightly from the app. Use fictional data only.
+
+1. **Open the app.** The Dashboard shows links to each section.
+2. **Register a caregiver.** Open the caregiver section, add a caregiver, fill in the required fields and save. Required fields left empty show an error.
+3. **Add a child.** Open the child profiles section, choose the caregiver, enter the child's name and birth date (it cannot be in the future) and save.
+4. **Schedule an appointment.** Open Appointments and create a new one. On Android 13 and later the app asks for permission to show notifications at this point. Choose the caregiver, optionally a child, and a date and time that are not in the past, then save.
+5. **Enable reminders.** Allow notifications when asked. If you denied them, enable them in the phone's Settings under Apps, MamaLink, Notifications. Appointments still save without the permission, but no reminder is shown.
+6. **Reschedule or cancel.** Open an appointment to edit its date and time, or cancel it. The reminder is replaced or removed with it.
+
+## Testing
+
+### Automated verification
+| Check | Result |
+|---|---|
+| GitHub Actions on `main` before Stage 6 | Passing |
+| Debug build | [Successful or Failed] |
+| Release build | [Successful or Failed] |
+| Debug unit tests | [tests] run, [failures] failures, [skipped] skipped |
+| Release unit tests | [tests] run, [failures] failures, [skipped] skipped |
+| Debug lint | [errors] errors, [warnings] warnings |
+| Release lint | [errors] errors, [warnings] warnings |
+
+The Stage 5 corrective changes (PR #9) are merged into `main`, and their tests are part of the suite above. Lint warnings that remain are dependency update advisories for the deliberately pinned toolchain: [confirm from your lint report].
+
+### Emulator verification
+The app launched and opened to the Dashboard on an Android emulator ([API level] and [API level]). The following were **not performed** in Stage 6 and are unverified:
+- A full manual walkthrough of caregiver, child and appointment management
+- Manual verification of reminders (scheduling, rescheduling, cancelling, restart recovery, permission denial and tapping a notification)
+- Accessibility, large font, dark theme and small-screen checks
+- Testing on a physical device
+
+## Known limitations
+
+- Reminders use WorkManager. Delivery is deferrable and is **not guaranteed at the exact time**. Android may delay it because of Doze, battery restrictions, force-stop or device policy.
+- The manual and device behaviours listed above as not performed have not been verified.
+- Care timeline and health resources are placeholders. There is no authentication, cloud sync or medical content.
+- This is a university prototype and not a medical product.
+- [Add any security or privacy limitation you found, for example what the notification text shows.]
+
+## Contributors
+
+MamaLink was built by a six-stage university group project. Contributors are listed by GitHub username.
+
+| Stage | Work | Contributor | Pull requests |
+|---|---|---|---|
+| Foundation | Shared domain models and repository contracts | MarvinOuma | [#3](https://github.com/MarvinOuma/MamaLink/pull/3) |
+| 1 | Android architecture and foundation | MarvinOuma | [#2](https://github.com/MarvinOuma/MamaLink/pull/2) |
+| 1 (follow-up) | Robolectric SDK resolution fix and build variant verification | MarvinOuma | [#5](https://github.com/MarvinOuma/MamaLink/pull/5) |
+| 2 | ViewModels and LiveData | Annah-2003 | [#6](https://github.com/MarvinOuma/MamaLink/pull/6) |
+| 3 | Room database and persistence | ChanelNasokho | [#1](https://github.com/MarvinOuma/MamaLink/pull/1), [#4](https://github.com/MarvinOuma/MamaLink/pull/4) |
+| 4 | XML user interface | EMMANUELMUTINDA | [#7](https://github.com/MarvinOuma/MamaLink/pull/7) |
+| 5 | Integration and appointment reminders | Squiffy1 | [#8](https://github.com/MarvinOuma/MamaLink/pull/8) |
+| 5 (corrective) | Reminder reliability and editor lifecycle fixes | MarvinOuma | [#9](https://github.com/MarvinOuma/MamaLink/pull/9) |
+| 6 | Final testing, documentation and release preparation | Paul Mukua (Paawl) | [Stage 6 PR]([add link after opening the PR]) |
+
+---
+
+# Development history
+
+The sections below are the original stage notes, preserved unchanged.
 
 ## Included in Stage 1
 
