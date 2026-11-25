@@ -108,6 +108,8 @@ class ChildEditorDialogFragment : DialogFragment() {
                 caregiverPicker.setSelection(index)
                 selectedCaregiverId = list[index].id
             }
+            (dialog as? AlertDialog)?.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled =
+                list.isNotEmpty() && !submissionPending
         }
 
         caregiverPicker.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {

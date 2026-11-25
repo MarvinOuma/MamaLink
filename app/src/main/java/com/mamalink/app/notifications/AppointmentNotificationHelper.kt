@@ -19,6 +19,18 @@ object AppointmentNotificationHelper {
     const val EXTRA_NAVIGATE_DESTINATION = "navigate_destination"
     const val EXTRA_APPOINTMENT_ID = "appointment_id"
 
+    fun canNotify(context: Context): Boolean =
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
+            NotificationManagerCompat.from(context).areNotificationsEnabled() &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+                (context.getSystemService(NotificationManager::class.java).getNotificationChannel(CHANNEL_ID)?.importance
+                    ?: NotificationManager.IMPORTANCE_DEFAULT) != NotificationManager.IMPORTANCE_NONE)
+
+    fun cancel(context: Context, appointmentId: Long) {
+        NotificationManagerCompat.from(context).cancel(appointmentId.toInt())
+    }
+
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = context.getString(R.string.notification_channel_name)
@@ -37,7 +49,8 @@ object AppointmentNotificationHelper {
         appointmentId: Long,
         title: String,
         formattedTime: String?,
-    ) {
+    ): Boolean {
+        if (!canNotify(context)) return false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(
                     context,
@@ -45,7 +58,7 @@ object AppointmentNotificationHelper {
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 // Permission not granted; return safely without crash
-                return
+                return false
             }
         }
 
@@ -76,8 +89,10 @@ object AppointmentNotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE) // Protect sensitive details on lock screen
             .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
             .setContentIntent(pendingIntent)
 
         NotificationManagerCompat.from(context).notify(appointmentId.toInt(), builder.build())
+        return true
     }
 }

@@ -33,7 +33,7 @@ class AppointmentViewModel(
     fun addAppointment(appointment: Appointment) = perform(RepositoryOperationState.Operation.INSERT) {
         validate(appointment)
         validateInput(!appointment.scheduledAt.isBefore(clock.instant()), "New appointment time cannot be in the past.")
-        val id = repository.insert(appointment.copy(id = 0L))
+        val id = persistChange { repository.insert(appointment.copy(id = 0L)) }
         if (id > 0L) scheduleReminder(appointment.copy(id = id))
         id
     }
@@ -41,21 +41,33 @@ class AppointmentViewModel(
     fun updateAppointment(appointment: Appointment) = perform(RepositoryOperationState.Operation.UPDATE) {
         validateInput(appointment.id > 0, "A saved appointment is required.")
         validate(appointment)
-        validateInput(repository.update(appointment) > 0, "Appointment was not found.")
+        validateInput(persistChange { repository.update(appointment) } > 0, "Appointment was not found.")
         scheduleReminder(appointment)
         appointment.id
     }
 
     fun deleteAppointment(id: Long) = perform(RepositoryOperationState.Operation.DELETE) {
         validateInput(id > 0, "A saved appointment is required.")
-        validateInput(repository.deleteById(id) > 0, "Appointment was not found.")
-        runCatching { reminderScheduler?.cancelReminder(id) }
+        validateInput(persistChange { repository.deleteById(id) } > 0, "Appointment was not found.")
+        repairAfterWrite { reminderScheduler?.cancelReminder(id) }
         id
     }
 
-    private fun scheduleReminder(appointment: Appointment) {
-        // Room is the source of truth; startup reconciliation repairs a failed enqueue.
-        runCatching { reminderScheduler?.scheduleReminder(appointment) }
+    private suspend fun <T> persistChange(change: suspend () -> T): T =
+        if (reminderScheduler != null) reminderScheduler.persistChange(change) else change()
+
+    private suspend fun scheduleReminder(appointment: Appointment) =
+        repairAfterWrite { reminderScheduler?.scheduleReminder(appointment) }
+
+    private suspend fun repairAfterWrite(repair: suspend () -> Unit) {
+        try {
+            repair()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            // The Room write succeeded. Its precommitted journal and periodic worker repair this.
+            android.util.Log.e("ReminderRecovery", "Appointment saved; reminder repair remains pending", failure)
+        }
     }
 
     private fun validate(appointment: Appointment) {

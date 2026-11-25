@@ -3,7 +3,6 @@ package com.mamalink.app.notifications
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.mamalink.app.MamaLinkApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,16 +14,20 @@ class BootReceiver : BroadcastReceiver() {
             intent.action != Intent.ACTION_MY_PACKAGE_REPLACED
         ) return
 
-        val app = context.applicationContext as? MamaLinkApplication ?: return
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                runCatching {
-                    app.reminderScheduler.reconcileReminders(app.appointmentRepository.getAll())
+                // Broadcast lifetime covers only persistence of work, never database reconciliation.
+                kotlinx.coroutines.withTimeout(8_000) {
+                    enqueueRecovery(AndroidReminderWorkQueue(context))
                 }
+            } catch (failure: Exception) {
+                android.util.Log.e("ReminderRecovery", "Boot repair enqueue failed; registered periodic recovery remains durable", failure)
             } finally {
                 pendingResult.finish()
             }
         }
     }
+
+    internal suspend fun enqueueRecovery(queue: ReminderWorkQueue) = queue.requestReconciliation()
 }
