@@ -4,10 +4,6 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.mamalink.app.MamaLinkApplication
-import java.time.Clock
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 internal fun isCurrentUpcomingAppointment(
     appointment: com.mamalink.app.domain.model.Appointment?,
@@ -28,27 +24,15 @@ class AppointmentReminderWorker(
         if (appointmentId <= 0L || expectedScheduledAt == Long.MIN_VALUE) return Result.failure()
 
         val app = applicationContext as? MamaLinkApplication ?: return Result.failure()
-        val appointment = app.appointmentRepository.getById(appointmentId)
-            ?: return Result.success()
-        if (!isCurrentUpcomingAppointment(
-                appointment,
-                expectedScheduledAt,
-                Clock.systemDefaultZone().instant(),
-            )
-        ) return Result.success()
-
-        val formattedTime = LocalDateTime.ofInstant(
-            appointment.scheduledAt,
-            ZoneId.systemDefault(),
-        ).format(DateTimeFormatter.ofPattern("MMM d, h:mm a"))
-
-        AppointmentNotificationHelper.showAppointmentNotification(
-            applicationContext,
-            appointment.id,
-            appointment.title,
-            formattedTime,
-        )
-        return Result.success()
+        return try {
+            app.reminderScheduler.deliver(appointmentId, expectedScheduledAt)
+            Result.success()
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            android.util.Log.e("AppointmentReminder", "Delivery failed; WorkManager will retry", failure)
+            Result.retry()
+        }
     }
 
     companion object {

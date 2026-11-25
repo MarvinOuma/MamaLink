@@ -40,21 +40,21 @@ class AppointmentReminderIntegrationTest {
         val cancelled = mutableListOf<Long>()
         var scheduleCalls = 0
 
-        override fun scheduleReminder(appointment: Appointment) {
+        override suspend fun scheduleReminder(appointment: Appointment) {
             scheduleCalls++
             scheduled[appointment.id] = appointment
             cancelled.remove(appointment.id)
         }
 
-        override fun cancelReminder(appointmentId: Long) {
+        override suspend fun cancelReminder(appointmentId: Long) {
             scheduled.remove(appointmentId)
             cancelled += appointmentId
         }
 
         override suspend fun reconcileReminders(appointments: List<Appointment>) {
             val currentIds = appointments.mapTo(mutableSetOf()) { it.id }
-            (scheduled.keys - currentIds).forEach(::cancelReminder)
-            appointments.forEach(::scheduleReminder)
+            (scheduled.keys - currentIds).forEach { cancelReminder(it) }
+            appointments.forEach { scheduleReminder(it) }
         }
     }
 

@@ -50,6 +50,8 @@ class AppointmentFragment : Fragment(R.layout.fragment_records) {
     ) { isGranted ->
         if (!isGranted) {
             Toast.makeText(requireContext(), R.string.notification_permission_required, Toast.LENGTH_SHORT).show()
+        } else {
+            app.reconcileAppointmentReminders()
         }
     }
 

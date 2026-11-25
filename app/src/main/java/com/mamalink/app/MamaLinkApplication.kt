@@ -10,8 +10,8 @@ import com.mamalink.app.domain.repository.AppointmentRepository
 import com.mamalink.app.domain.repository.CaregiverRepository
 import com.mamalink.app.domain.repository.ChildRepository
 import com.mamalink.app.notifications.AppointmentNotificationHelper
-import com.mamalink.app.notifications.AppointmentReminderScheduler
 import com.mamalink.app.notifications.WorkManagerAppointmentReminderScheduler
+import com.mamalink.app.notifications.AndroidReminderWorkQueue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,7 +26,7 @@ class MamaLinkApplication : Application() {
     val caregiverRepository: CaregiverRepository by lazy { RoomCaregiverRepository(database.caregiverDao()) }
     val childRepository: ChildRepository by lazy { RoomChildRepository(database.childDao()) }
     val appointmentRepository: AppointmentRepository by lazy { RoomAppointmentRepository(database.appointmentDao()) }
-    val reminderScheduler: AppointmentReminderScheduler by lazy {
+    val reminderScheduler by lazy {
         WorkManagerAppointmentReminderScheduler(this)
     }
 
@@ -37,8 +37,12 @@ class MamaLinkApplication : Application() {
 
     fun reconcileAppointmentReminders() {
         applicationScope.launch {
-            runCatching {
-                reminderScheduler.reconcileReminders(appointmentRepository.getAll())
+            try {
+                AndroidReminderWorkQueue(this@MamaLinkApplication).requestReconciliation()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                android.util.Log.e("ReminderRecovery", "Unable to request repair; existing periodic recovery remains registered", failure)
             }
         }
     }

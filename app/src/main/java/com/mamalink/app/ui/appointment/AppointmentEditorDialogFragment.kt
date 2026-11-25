@@ -188,7 +188,7 @@ class AppointmentEditorDialogFragment : DialogFragment() {
             childPicker.setSelection(if (pos > 0) pos else 0)
             childrenLoaded = true
             childPicker.isEnabled = true
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = true
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = caregivers.isNotEmpty() && !submissionPending
         }
 
         fun updateChildrenForCaregiver(caregiverId: Long) {
@@ -320,12 +320,6 @@ class AppointmentEditorDialogFragment : DialogFragment() {
         if (::locationInput.isInitialized) {
             outState.putString(KEY_LOCATION, locationInput.text.toString())
         }
-    }
-
-    override fun onStop() {
-        childObservation?.dispose()
-        childObservation = null
-        super.onStop()
     }
 
     override fun onDestroyView() {
